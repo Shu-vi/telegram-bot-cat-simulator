@@ -60,7 +60,8 @@ public class CatBot extends TelegramLongPollingBot {
                 || word.equals("Выйти из игры")
                 || word.matches("^(С|с)оздать кота: ([А-яA-z]+)\\nПорода: ((Д|д)линнолапый|(К|к)репкий|(М|м)ускулистый)\\nЛокация: ([А-я]+)\\nПол: (((К|к)от)|((К|к)ошка))$")
                 || word.matches("^Зайти на ([А-яA-z]+)$")
-                || word.matches("^Пойти в ([А-я]+)$");
+                || word.matches("^Пойти в ([А-я]+)$")
+                || word.matches("^Зайти в укрытие ([А-я ]+)$");
     }
 
     /**
@@ -96,16 +97,16 @@ public class CatBot extends TelegramLongPollingBot {
                 new CommandAboutLocation(this).aboutLocation(update);
                 return;
             case "Съесть дичь":
-                new CommandEat(this).eat(update);
+                new Thread(new CommandEat(this, update)).start();
                 return;
             case "Попить воды":
-                new CommandDrink(this).drink(update);
+                new Thread(new CommandDrink(this, update)).start();
                 return;
             case "Излечиться травой":
-                new CommandHealing(this).healing(update);
+                new Thread(new CommandHealing(this, update)).start();
                 return;
             case "Спать":
-                new CommandSleep(this).sleep(update);
+                new Thread(new CommandSleep(this, update)).start();
                 return;
             case "Выйти из укрытия":
                 new CommandExitFromShelter(this).exitFromShelter(update);
@@ -121,6 +122,8 @@ public class CatBot extends TelegramLongPollingBot {
                     new CommandAboutLocation(this).aboutLocation(update);
                 } else if (message.matches("^Пойти в ([А-я]+)$")) {
                     new Thread(new CommandMoveToLocation(this, update, new CommandAboutLocation(this))).start();
+                } else if (message.matches("^Зайти в укрытие ([А-я ]+)$")) {
+                    new CommandEnterToShelter(this).enterToShelter(update);
                 }
                 return;
         }

@@ -32,7 +32,7 @@ public class CommandCreateCat extends Command{
         } else if (isExistCatName(catName, chatId)){
             nameIsNotFreeMessage(chatId);
         } else{
-            Cat cat = new Cat(0, catName, catGender, breedId, 0, 0, 0, 0, location.getId(), chatId, false);
+            Cat cat = new Cat(0, catName, catGender, breedId, 100, 100, 100, 100, location.getId(), chatId, false);
             database.addCat(cat);
             congratulationsMessage(chatId);
         }
@@ -53,10 +53,10 @@ public class CommandCreateCat extends Command{
     }
 
     /**
-     * @return true, если у пользователя < 3 котов И состояние NOT_IN_GAME
+     * @return true, если у пользователя < 1 кота И состояние NOT_IN_GAME
      */
     private Boolean isCanCreateCat(Long userId){
-        return database.getUserById(userId).getCondition() == User.NOT_IN_GAME && database.getCatsCountByUserId(userId)<3;
+        return database.getUserById(userId).getCondition() == User.NOT_IN_GAME && database.getCatsCountByUserId(userId)<1;
     }
 
     /**

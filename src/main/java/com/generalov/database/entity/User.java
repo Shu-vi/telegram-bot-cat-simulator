@@ -1,8 +1,9 @@
 package com.generalov.database.entity;
 
 import lombok.Getter;
+import lombok.Setter;
 
-@Getter
+@Getter @Setter
 public class User{
     private Long id;
     private String name;

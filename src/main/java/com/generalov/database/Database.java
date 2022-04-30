@@ -58,18 +58,51 @@ public class Database {
      * Добавляет пользователя в бд при старте бота.
      */
     @SneakyThrows
-    public synchronized Boolean addUser(User user){
+    public synchronized void addUser(User user){
         connectToDB();
-        Long userId = user.getId();
-        String userName = user.getName();
-        PreparedStatement statement = connection.prepareStatement("insert into users(id, name, condition) VALUES (?, ?, 0)");
-        statement.setLong(1, userId);
-        statement.setString(2, userName);
-        Boolean isAdd = statement.execute();
+        PreparedStatement statement = connection.prepareStatement("insert into users(id, name, condition) VALUES (?, ?, ?)");
+        statement.setLong(1, user.getId());
+        statement.setString(2, user.getName());
+        statement.setShort(3, user.getCondition());
+        statement.execute();
         disconnectBD();
-        return isAdd;
     }
 
+
+    @SneakyThrows
+    public Shelter getShelterByShelterTitle(String shelterTitle){
+        Shelter shelter = null;
+        connectToDB();
+        PreparedStatement statement = connection.prepareStatement("select * from shelter where title = ?");
+        statement.setString(1, shelterTitle);
+        ResultSet result = statement.executeQuery();
+        while (result.next()){
+            shelter = new Shelter(
+                    result.getInt("id"),
+                    result.getString("title"),
+                    result.getInt("capacity"),
+                    result.getInt("location_id"),
+                    result.getArray("cats") != null? (Integer[]) result.getArray("cats").getArray() : null
+            );
+        }
+        disconnectBD();
+        return shelter;
+    }
+
+    @SneakyThrows
+    public void setShelterByShelterId(Shelter shelter){
+        connectToDB();
+        PreparedStatement statement = connection.prepareStatement("update shelter" +
+                " set title = ?, capacity = ?, location_id = ?, cats = ?" +
+                " where id = ?");
+        statement.setString(1, shelter.getTitle());
+        statement.setInt(2, shelter.getCapacity());
+        statement.setInt(3, shelter.getLocationId());
+        statement.setArray(4, connection.createArrayOf("integer", shelter.getCats()));
+        statement.setInt(5, shelter.getId());
+        statement.execute();
+        disconnectBD();
+    }
 
     /**
      * @param id айди пользователя.
@@ -77,11 +110,11 @@ public class Database {
      */
     @SneakyThrows
     public synchronized User getUserById(Long id) {
+        User user = null;
         connectToDB();
         PreparedStatement statement = connection.prepareStatement("select * from users where id = ?");
         statement.setLong(1, id);
         ResultSet result = statement.executeQuery();
-        User user = null;
         while (result.next()) {
             user = new User(
                     result.getLong("id"),
@@ -99,13 +132,13 @@ public class Database {
      */
     @SneakyThrows
     public synchronized String getBreedByBreedId(Integer id){
+        String breed = null;
         connectToDB();
-        String breed;
         PreparedStatement statement = connection.prepareStatement("select title from breed where id = ?");
         statement.setInt(1, id);
         ResultSet result = statement.executeQuery();
-        result.next();
-        breed = result.getString("title");
+        while (result.next())
+            breed = result.getString("title");
         disconnectBD();
         return breed;
     }
@@ -115,22 +148,23 @@ public class Database {
      * Добавляет кота в БД.
      */
     @SneakyThrows
-    public synchronized Boolean addCat(Cat cat){
+    public synchronized void addCat(Cat cat){
         connectToDB();
-        String catName = cat.getName();
-        String catGender = cat.getGender();
-        Integer breedId = cat.getBreedId();
-        Integer locationId = cat.getLocationId();
-        Long userId = cat.getUserId();
-        PreparedStatement statement = connection.prepareStatement("insert into cat(name, gender, breed_id, health, satiety, water, stamina, location_id, user_id, is_online) values(?, ?, ?, 100, 100, 100, 100, ?, ?, false)");
-        statement.setString(1, catName);
-        statement.setString(2, catGender);
-        statement.setInt(3, breedId);
-        statement.setInt(4, locationId);
-        statement.setLong(5, userId);
-        Boolean isAdd = statement.execute();
+        PreparedStatement statement = connection.prepareStatement("insert into " +
+                "cat(name, gender, breed_id, health, satiety, water, stamina, location_id, user_id, is_online) " +
+                "values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        statement.setString(1, cat.getName());
+        statement.setString(2, cat.getGender());
+        statement.setInt(3, cat.getBreedId());
+        statement.setInt(4, cat.getHealth());
+        statement.setInt(5, cat.getSatiety());
+        statement.setInt(6, cat.getWater());
+        statement.setInt(7, cat.getStamina());
+        statement.setInt(8, cat.getLocationId());
+        statement.setLong(9, cat.getUserId());
+        statement.setBoolean(10, cat.getIsOnline());
+        statement.execute();
         disconnectBD();
-        return isAdd;
     }
 
     /**
@@ -328,7 +362,7 @@ public class Database {
                     result.getInt("location_id"),
                     result.getLong("user_id"),
                     result.getBoolean("is_online")
-                    );
+            );
         disconnectBD();
         return cat;
     }
@@ -422,6 +456,10 @@ public class Database {
     }
 
     public static void main(String[] args) {
-
+        Database database = Database.getObjectDatabaseControl();
+//        Integer[] cats = {2, 4};
+//        Shelter shelter = new Shelter(5, "Пещера", 10, 2, null);
+//        database.setShelterByShelterId(shelter);
+        Shelter shelter = database.getShelterByShelterTitle("Пещера");
     }
 }

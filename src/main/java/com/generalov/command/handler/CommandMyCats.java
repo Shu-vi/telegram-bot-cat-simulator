@@ -15,6 +15,15 @@ public class CommandMyCats extends Command{
     }
 
 
+    public void myCats(Update update){
+        Long userId = update.getMessage().getChatId();
+        if (database.getUserById(userId).getCondition() == User.NOT_IN_GAME){
+            getCats(userId);
+        } else {
+            wrongConditionMessage(userId);
+        }
+    }
+
     @SneakyThrows
     private void getCats(Long userId){
         ArrayList<Cat> cats = database.getCatsListByUserId(userId);
@@ -40,15 +49,5 @@ public class CommandMyCats extends Command{
     private void wrongConditionMessage(Long userId){
         String text = "Данную команду невозможно выполнить, находясь в игре. Для начала выйдите из игры командой \"Выйти из игры\".";
         catBot.execute(SendMessage.builder().chatId(userId.toString()).text(text).build());
-    }
-
-
-    public void myCats(Update update){
-        Long userId = update.getMessage().getChatId();
-        if (database.getUserById(userId).getCondition() == User.NOT_IN_GAME){
-            getCats(userId);
-        } else {
-            wrongConditionMessage(userId);
-        }
     }
 }

@@ -14,8 +14,7 @@ public class CommandStart extends Command{
 
     /**
      * Действия, которые будут выполняться при команде /start.
-     * Добавляет юзера в БД, если его там ещё нет.
-     * Пишет юзеру приветствие и сообщает его персональный код.
+     * Если юзера нет в БД, то добавляет его в бд и отправляет приветствие.
      */
     @SneakyThrows
     public void start(Update update) {
@@ -37,9 +36,8 @@ public class CommandStart extends Command{
     }
 
     /**
-     *Метод отправляет пользователю приветствие. Вызывается в методе commandStart.
+     *Метод отправляет пользователю приветствие и сообщает инфу о боте.
      */
-    //TODO доделывать приветствие
     @SneakyThrows
     private void sendGreeting(String userFirstName, Long userId) {
         String messageText = "Здравствуйте, " + userFirstName + ".\nЭтот бот позволит вам" +

@@ -17,6 +17,24 @@ public class CommandMoveToLocation extends Command implements Runnable{
         this.commandAboutLocation = commandAboutLocation;
     }
 
+    @Override
+    public void run() {
+        Long userId = update.getMessage().getChatId();
+        String message = update.getMessage().getText();
+        Short userCondition = database.getUserById(userId).getCondition();
+        if (userCondition == User.IN_GAME){
+            database.setUserConditionByUserId(User.MOVING, userId);
+            moveToLocation(userId, message);
+            commandAboutLocation.aboutLocation(update);
+            database.setUserConditionByUserId(User.IN_GAME, userId);
+        } else if (userCondition == User.NOT_IN_GAME) {
+            notInGameMessage(userId);
+        } else {
+            wrongConditionMessage(userId);
+        }
+    }
+
+    @SneakyThrows
     private void moveToLocation(Long userId, String message){
         /**
          * достаём название локации.
@@ -30,15 +48,51 @@ public class CommandMoveToLocation extends Command implements Runnable{
         Location wishesLocation = database.getLocationByLocationTitle(locationTitle);
         if (isExistLocation(wishesLocation)){
             if (isContains(wishesLocation, neighboringLocationId)){
-                cat.setLocationId(wishesLocation.getId());
-                database.setCat(cat);
+                movingMessage(userId);
+                Thread.sleep(30000);
+                editCatParametersDuringMoving(cat, wishesLocation);
                 congratulationMessage(userId, wishesLocation.getTitle());
             }else {
                 notNeighboringLocationMessage(userId);
             }
         }else {
-            notExistLocation(userId);
+            notExistLocationMessage(userId);
         }
+    }
+
+    @SneakyThrows
+    private void movingMessage(Long userId){
+        String message = "Начался переход в другую локацию, это займёт 30 секунд.";
+        catBot.execute(SendMessage.builder().chatId(userId.toString()).text(message).build());
+    }
+
+    private void editCatParametersDuringMoving(Cat cat, Location location){
+        cat.setLocationId(location.getId());
+        if (cat.getStamina() > 3){
+            cat.setStamina(cat.getStamina() - 3);
+        } else {
+            //Нельзя перейти, не хватает стамины
+            return;
+        }
+        if (cat.getHealth() > 1){
+            cat.setHealth(cat.getHealth() - 1);
+        } else {
+            //Нельзя перейти, мало здоровья
+            return;
+        }
+        if (cat.getSatiety() > 10){
+            cat.setSatiety(cat.getSatiety() - 10);
+        }else {
+            //нельзя перейти, мало еды
+            return;
+        }
+        if (cat.getWater() > 7){
+            cat.setWater(cat.getWater() - 7);
+        }else {
+            //Нельзя перейтиЮ мало воды
+            return;
+        }
+        database.setCat(cat);
     }
 
     @SneakyThrows
@@ -82,7 +136,7 @@ public class CommandMoveToLocation extends Command implements Runnable{
     }
 
     @SneakyThrows
-    private void notExistLocation(Long userId){
+    private void notExistLocationMessage(Long userId){
         String message = "Такой локации не существует.";
         catBot.execute(SendMessage.builder().chatId(userId.toString()).text(message).build());
     }
@@ -91,23 +145,5 @@ public class CommandMoveToLocation extends Command implements Runnable{
     private void notNeighboringLocationMessage(Long userId){
         String message = "Вы не можете пойти в данную локацию, поскольку она не граничит с той локацией, в которой находитесь вы.";
         catBot.execute(SendMessage.builder().chatId(userId.toString()).text(message).build());
-    }
-
-    @Override @SneakyThrows
-    public void run() {
-        Long userId = update.getMessage().getChatId();
-        String message = update.getMessage().getText();
-        Short userCondition = database.getUserById(userId).getCondition();
-        if (userCondition == User.IN_GAME){
-            database.setUserConditionByUserId(User.MOVING, userId);
-            Thread.sleep(30000);
-            moveToLocation(userId, message);
-            commandAboutLocation.aboutLocation(update);
-            database.setUserConditionByUserId(User.IN_GAME, userId);
-        } else if (userCondition == User.NOT_IN_GAME) {
-            notInGameMessage(userId);
-        } else {
-            wrongConditionMessage(userId);
-        }
     }
 }
