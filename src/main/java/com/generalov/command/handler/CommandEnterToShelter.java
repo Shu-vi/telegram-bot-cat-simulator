@@ -4,6 +4,7 @@ import com.generalov.CatBot;
 import com.generalov.database.entity.Cat;
 import com.generalov.database.entity.Shelter;
 import com.generalov.database.entity.User;
+import com.generalov.string.handler.StringHandler;
 import lombok.SneakyThrows;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
@@ -15,7 +16,7 @@ public class CommandEnterToShelter extends Command{
 
     public void enterToShelter(Update update){
         Long userId = update.getMessage().getChatId();
-        String message = update.getMessage().getText();
+        String message = StringHandler.deleteBotName(update.getMessage().getText());
         Short userCondition = database.getUserById(userId).getCondition();
         if (userCondition == User.IN_GAME){
             enterToShelter(userId, message);

@@ -21,9 +21,15 @@ public class CatBot extends TelegramLongPollingBot {
      * Объект клавиатуры для команды /help
      */
     private InlineKeyboardMarkup outGameKeyboard;
+    /**
+     * Объект клавиатуры для команды /help
+     */
+    private InlineKeyboardMarkup inGameKeyboard;
+
 
     public CatBot(){
         initOutGameKeyboard();
+        initInGameKeyboard();
     }
 
     @Override
@@ -95,7 +101,7 @@ public class CatBot extends TelegramLongPollingBot {
         message = StringHandler.deleteBotName(message);
         switch (message) {
             case "/help":
-                new CommandHelp(this, outGameKeyboard).help(update);
+                new CommandHelp(this, outGameKeyboard, inGameKeyboard).help(update);
                 return;
             case "Мои коты":
                 new CommandMyCats(this).myCats(update);
@@ -151,6 +157,9 @@ public class CatBot extends TelegramLongPollingBot {
         execute(SendMessage.builder().chatId(update.getMessage().getChatId().toString()).text("Действие нераспознано. Пожалуйста, вызовите помощь командой /help").build());
     }
 
+    /**
+     * Клавиатура для команды помощи вне игры.
+     */
     private void initOutGameKeyboard(){
         outGameKeyboard = new InlineKeyboardMarkup();
         /**
@@ -175,6 +184,42 @@ public class CatBot extends TelegramLongPollingBot {
          * Добавление рядов в объект клавиатуры
          */
         outGameKeyboard.setKeyboard(rowArrayList);
+    }
+
+    /**
+     * Клавиатура для команды помощи в игре.
+     */
+    private void initInGameKeyboard(){
+        inGameKeyboard = new InlineKeyboardMarkup();
+        /**
+         * Первый ряд кнопок
+         */
+        List<InlineKeyboardButton> buttonsRow1 = new ArrayList<>();
+        buttonsRow1.add(InlineKeyboardButton.builder().text("О текущей локации").switchInlineQueryCurrentChat("О локации").build());
+        buttonsRow1.add(InlineKeyboardButton.builder().text("Покушать").switchInlineQueryCurrentChat("Съесть дичь").build());
+        buttonsRow1.add(InlineKeyboardButton.builder().text("Попить").switchInlineQueryCurrentChat("Попить воды").build());
+        /**
+         * Второй ряд кнопок
+         */
+        List<InlineKeyboardButton> buttonsRow2 = new ArrayList<>();
+        buttonsRow2.add(InlineKeyboardButton.builder().text("Восстановить здоровье").switchInlineQueryCurrentChat("Излечиться травой").build());
+        buttonsRow2.add(InlineKeyboardButton.builder().text("Смена локации").switchInlineQueryCurrentChat("Пойти в НазваниеЛокации").build());
+        buttonsRow2.add(InlineKeyboardButton.builder().text("Зайти в укрытие").switchInlineQueryCurrentChat("Зайти в укрытие НазваниеУкрытия").build());
+        List<InlineKeyboardButton> buttonsRow3 = new ArrayList<>();
+        buttonsRow3.add(InlineKeyboardButton.builder().text("Выйти из укрытия").switchInlineQueryCurrentChat("Выйти из укрытия").build());
+        buttonsRow3.add(InlineKeyboardButton.builder().text("Спать").switchInlineQueryCurrentChat("Спать").build());
+        buttonsRow3.add(InlineKeyboardButton.builder().text("Выйти из игры").switchInlineQueryCurrentChat("Выйти из игры").build());
+        /**
+         * Объединение рядов
+         */
+        List<List<InlineKeyboardButton>> rowArrayList = new ArrayList<>();
+        rowArrayList.add(buttonsRow1);
+        rowArrayList.add(buttonsRow2);
+        rowArrayList.add(buttonsRow3);
+        /**
+         * Добавление рядов в объект клавиатуры
+         */
+        inGameKeyboard.setKeyboard(rowArrayList);
     }
 
     @SneakyThrows

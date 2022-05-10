@@ -9,9 +9,11 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMa
 
 public class CommandHelp extends Command{
     InlineKeyboardMarkup outGameKeyboard;
-    public CommandHelp(CatBot catBot, InlineKeyboardMarkup outGameKeyboard){
+    InlineKeyboardMarkup inGameKeyboard;
+    public CommandHelp(CatBot catBot, InlineKeyboardMarkup outGameKeyboard, InlineKeyboardMarkup inGameKeyboard){
         super(catBot);
         this.outGameKeyboard = outGameKeyboard;
+        this.inGameKeyboard = inGameKeyboard;
     }
 
 
@@ -37,8 +39,9 @@ public class CommandHelp extends Command{
                 "\n5) \"Излечиться травой\" - если на локации есть трава, то кот покушает её и излечится." +
                 "\n6) \"Зайти в укрытие НазваниеУкрытия\" - заходит в укрытие на локации с названием НазваниеУкрытия." +
                 "\n7) \"Спать\" - ложится спать в укрытии и восстанавливает выносливость во время сна." +
-                "\n8) \"Выйти из укрытия\" - выходит из укрытия.";
-        catBot.execute(SendMessage.builder().chatId(userId.toString()).text(message).build());
+                "\n8) \"Выйти из укрытия\" - выходит из укрытия." +
+                "\n9) \"Выйти из игры\" - выходит из игры.";
+        catBot.execute(SendMessage.builder().chatId(userId.toString()).text(message).replyMarkup(inGameKeyboard).build());
     }
 
     @SneakyThrows
