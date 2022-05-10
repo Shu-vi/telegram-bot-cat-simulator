@@ -2,6 +2,7 @@ package com.generalov.command.handler;
 
 import com.generalov.CatBot;
 import com.generalov.database.entity.User;
+import com.generalov.string.handler.StringHandler;
 import lombok.SneakyThrows;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
@@ -27,7 +28,7 @@ public class CommandEnterOn extends Command{
 
     public void enterOn(Update update){
         Long userId = update.getMessage().getChatId();
-        String message = update.getMessage().getText();
+        String message = StringHandler.deleteBotName(update.getMessage().getText());
         Short userCondition = database.getUserById(userId).getCondition();
         if (userCondition == User.NOT_IN_GAME) {
             enterOn(message, userId);

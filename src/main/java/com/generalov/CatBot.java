@@ -2,17 +2,28 @@ package com.generalov;
 
 import com.generalov.command.handler.*;
 import com.generalov.properties.GetProperties;
+import com.generalov.string.handler.StringHandler;
 import lombok.SneakyThrows;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.TelegramBotsApi;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class CatBot extends TelegramLongPollingBot {
     private MessageType messageType;
+    /**
+     * Объект клавиатуры для команды /help
+     */
+    private InlineKeyboardMarkup outGameKeyboard;
 
     public CatBot(){
+        initOutGameKeyboard();
     }
 
     @Override
@@ -61,7 +72,8 @@ public class CatBot extends TelegramLongPollingBot {
                 || word.matches("^(С|с)оздать кота: ([А-яA-z]+)\\nПорода: ((Д|д)линнолапый|(К|к)репкий|(М|м)ускулистый)\\nЛокация: ([А-я]+)\\nПол: (((К|к)от)|((К|к)ошка))$")
                 || word.matches("^Зайти на ([А-яA-z]+)$")
                 || word.matches("^Пойти в ([А-я]+)$")
-                || word.matches("^Зайти в укрытие ([А-я ]+)$");
+                || word.matches("^Зайти в укрытие ([А-я ]+)$")
+                || word.contains("@cat_1_simulator_bot ");
     }
 
     /**
@@ -80,9 +92,10 @@ public class CatBot extends TelegramLongPollingBot {
      */
     private void sendMessage(Update update) {
         String message = update.getMessage().getText();
+        message = StringHandler.deleteBotName(message);
         switch (message) {
             case "/help":
-                new CommandHelp(this).help(update);
+                new CommandHelp(this, outGameKeyboard).help(update);
                 return;
             case "Мои коты":
                 new CommandMyCats(this).myCats(update);
@@ -136,6 +149,32 @@ public class CatBot extends TelegramLongPollingBot {
     @SneakyThrows
     private void sendOther(Update update) {
         execute(SendMessage.builder().chatId(update.getMessage().getChatId().toString()).text("Действие нераспознано. Пожалуйста, вызовите помощь командой /help").build());
+    }
+
+    private void initOutGameKeyboard(){
+        outGameKeyboard = new InlineKeyboardMarkup();
+        /**
+         * Первый ряд кнопок
+         */
+        List<InlineKeyboardButton> buttonsRow1 = new ArrayList<>();
+        buttonsRow1.add(InlineKeyboardButton.builder().text("Мои коты").switchInlineQueryCurrentChat("Мои коты").build());
+        buttonsRow1.add(InlineKeyboardButton.builder().text("Локации для спавна").switchInlineQueryCurrentChat("Локации").build());
+        /**
+         * Второй ряд кнопок
+         */
+        List<InlineKeyboardButton> buttonsRow2 = new ArrayList<>();
+        buttonsRow2.add(InlineKeyboardButton.builder().text("Создать кота").switchInlineQueryCurrentChat("Создать кота: ИмяКота\nПорода: длиннолапый\nЛокация: Деревня\nПол: кот").build());
+        buttonsRow2.add(InlineKeyboardButton.builder().text("Зайти в игру").switchInlineQueryCurrentChat("Зайти на ИмяКота").build());
+        /**
+         * Объединение рядов
+         */
+        List<List<InlineKeyboardButton>> rowArrayList = new ArrayList<>();
+        rowArrayList.add(buttonsRow1);
+        rowArrayList.add(buttonsRow2);
+        /**
+         * Добавление рядов в объект клавиатуры
+         */
+        outGameKeyboard.setKeyboard(rowArrayList);
     }
 
     @SneakyThrows

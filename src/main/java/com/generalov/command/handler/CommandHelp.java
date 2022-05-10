@@ -5,10 +5,13 @@ import com.generalov.database.entity.User;
 import lombok.SneakyThrows;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 
 public class CommandHelp extends Command{
-    public CommandHelp(CatBot catBot){
+    InlineKeyboardMarkup outGameKeyboard;
+    public CommandHelp(CatBot catBot, InlineKeyboardMarkup outGameKeyboard){
         super(catBot);
+        this.outGameKeyboard = outGameKeyboard;
     }
 
 
@@ -53,6 +56,6 @@ public class CommandHelp extends Command{
                 " НазваниеЛокацииДляСпавна - название локации, нужно выбрать одну из следующих двух \"Деревня\", \"Лес\"," +
                 " ПолКота - пол вашего котика, нужно выбрать один из следующих двух \"Кот\", \"Кошка\"." +
                 "\n4) \"Зайти на ИмяКота\" - зайдёт в игру на кота с именем ИмяКота";
-        catBot.execute(SendMessage.builder().chatId(userId.toString()).text(text).build());
+        catBot.execute(SendMessage.builder().chatId(userId.toString()).text(text).replyMarkup(outGameKeyboard).build());
     }
 }

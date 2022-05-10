@@ -4,6 +4,7 @@ import com.generalov.CatBot;
 import com.generalov.database.entity.Cat;
 import com.generalov.database.entity.Location;
 import com.generalov.database.entity.User;
+import com.generalov.string.handler.StringHandler;
 import lombok.SneakyThrows;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
@@ -44,7 +45,7 @@ public class CommandCreateCat extends Command{
      */
     public void createCat(Update update){
         Long userId = update.getMessage().getChatId();
-        String message = update.getMessage().getText();
+        String message = StringHandler.deleteBotName(update.getMessage().getText());
         if (isCanCreateCat(userId)){
             addCat(message, userId);
         }else {

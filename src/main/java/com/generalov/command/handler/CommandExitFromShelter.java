@@ -4,6 +4,8 @@ import com.generalov.CatBot;
 import com.generalov.database.entity.Cat;
 import com.generalov.database.entity.Shelter;
 import com.generalov.database.entity.User;
+import lombok.SneakyThrows;
+import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 
 import java.util.ArrayList;
@@ -18,8 +20,16 @@ public class CommandExitFromShelter extends Command{
         Short userCondition = database.getUserById(userId).getCondition();
         if (userCondition == User.IN_SHELTER){
             exitFromShelter(userId);
+            congratulationMessage(userId);
         }
     }
+
+    @SneakyThrows
+    private void congratulationMessage(Long userId){
+        String message = "Вы покинули укрытие.";
+        catBot.execute(SendMessage.builder().text(message).chatId(userId.toString()).build());
+    }
+
 
     private void exitFromShelter(Long userId){
         User user = database.getUserById(userId);
