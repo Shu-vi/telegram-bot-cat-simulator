@@ -15,31 +15,6 @@ public class CommandCreateCat extends Command{
     }
 
     /**
-     * Метод создаёт кота. Поступают имя кота, порода, локация, пол, выстаскиваем эти данные из одного сообщения.
-     * Породу, пол, локацию нужно немного подкорректировать на случай, если пользователю ввёл их с нижнего регистра.
-     * Локацию нужно проверять на корректность.
-     * Нужно проверить на корректность имя кота, у одного пользователя не должно быть повторений по имени.
-     * Порода и пол приходят уже корректными.
-     */
-    private void addCat(String message, Long chatId){
-        String catName = getCatName(message);
-        String catBreed = normalizeData(getCatBreed(message));
-        Integer breedId = database.getBreedIdByBreed(catBreed);
-        String locationTitle = normalizeData(getLocationTitle(message));
-        Location location = database.getLocationByLocationTitle(locationTitle);
-        String catGender = normalizeData(getCatGender(message));
-        if (isWrongLocation(location.getId())){
-            notExistLocationMessage(chatId);
-        } else if (isExistCatName(catName, chatId)){
-            nameIsNotFreeMessage(chatId);
-        } else{
-            Cat cat = new Cat(0, catName, catGender, breedId, 100, 100, 100, 100, location.getId(), chatId, false);
-            database.addCat(cat);
-            congratulationsMessage(chatId);
-        }
-    }
-
-    /**
      * Передаёт создание кота в другой метод, но делает это если пользователь сейчас не в игре и у пользователя меньше 3 котов.
      * Если условие не выполняется, то сообщает пользователю об ошибке.
      */
@@ -50,6 +25,31 @@ public class CommandCreateCat extends Command{
             addCat(message, userId);
         }else {
             catLimitOrInGameMessage(userId);
+        }
+    }
+
+    /**
+     * Метод создаёт кота. Поступают имя кота, порода, локация, пол, выстаскиваем эти данные из одного сообщения.
+     * Породу, пол, локацию нужно немного подкорректировать на случай, если пользователю ввёл их с нижнего регистра.
+     * Локацию нужно проверять на корректность.
+     * Нужно проверить на корректность имя кота, у одного пользователя не должно быть повторений по имени.
+     * Порода и пол приходят уже корректными.
+     */
+    private void addCat(String message, Long chatId){
+        String catName = getCatName(message);
+        String catBreed = StringHandler.toUpperCaseFirstChar(getCatBreed(message));
+        Integer breedId = database.getBreedIdByBreed(catBreed);
+        String locationTitle = StringHandler.toUpperCaseFirstChar(getLocationTitle(message));
+        Location location = database.getLocationByLocationTitle(locationTitle);
+        String catGender = StringHandler.toUpperCaseFirstChar(getCatGender(message));
+        if (isWrongLocation(location.getId())){
+            notExistLocationMessage(chatId);
+        } else if (isExistCatName(catName, chatId)){
+            nameIsNotFreeMessage(chatId);
+        } else{
+            Cat cat = new Cat(0, catName, catGender, breedId, 100, 100, 100, 100, location.getId(), chatId, false);
+            database.addCat(cat);
+            congratulationsMessage(chatId);
         }
     }
 
@@ -163,14 +163,6 @@ public class CommandCreateCat extends Command{
     private void congratulationsMessage(Long chatId){
         String message = "Персонаж успешно создан";
         catBot.execute(SendMessage.builder().chatId(chatId.toString()).text(message).build());
-    }
-
-    /**
-     * @param message пол кота ИЛИ порода кота ИЛИ локация спавна
-     * @return возвращает откорректированный message, изменяя первую букву на верхний регистр, если она находится в нижнем.
-     */
-    private String normalizeData(String message){
-        return Character.toUpperCase(message.charAt(0)) + message.substring(1).toLowerCase();
     }
 
     /**

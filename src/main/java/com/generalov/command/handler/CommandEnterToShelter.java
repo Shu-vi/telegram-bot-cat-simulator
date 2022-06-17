@@ -20,10 +20,8 @@ public class CommandEnterToShelter extends Command{
         Short userCondition = database.getUserById(userId).getCondition();
         if (userCondition == User.IN_GAME){
             enterToShelter(userId, message);
+            congratulationsMessage(userId);
         } else {
-            /*
-            Здесь происходит обработка всякой хрени
-             */
             wrongConditionMessage(userId);
         }
     }
@@ -33,40 +31,30 @@ public class CommandEnterToShelter extends Command{
         Shelter shelter = database.getShelterByShelterTitle(shelterName);
         Cat cat = database.getCatByUserIdAndCatStatus(userId, true);
         addCatToShelter(shelter, cat);
-        congratulationsMessage(userId);
-        /**
-         * Получаем название укрытия.
-         * Достаём укрытие по его названию.
-         * Добавляем в укрытие кота.
-         * Изменяем укрытие.
-         * Сообщаем, что чел в укрытии.
-         */
-    }
-
-    @SneakyThrows
-    private void congratulationsMessage(Long userId){
-        String message = "Вы успешно вошли в укрытие.";
-        catBot.execute(SendMessage.builder().text(message).chatId(userId.toString()).build());
     }
 
     private void addCatToShelter(Shelter shelter, Cat newCat){
-        Integer[] oldCats = shelter.getCats();
-        Integer[] newCats;
-
-        if (oldCats != null) {
-            newCats = new Integer[oldCats.length + 1];
-            for (int i = 0; i < oldCats.length; i++) {
-                newCats[i] = oldCats[i];
-            }
-            newCats[oldCats.length] = newCat.getId();
-        }
-        else {
-            newCats = new Integer[1];
-            newCats[0] = newCat.getId();
-        }
-        shelter.setCats(newCats);
+        Integer[] oldCatsId = shelter.getCats();
+        Integer[] newCatsId = getNewCatsId(oldCatsId, newCat);
+        shelter.setCats(newCatsId);
         database.setShelterByShelterId(shelter);
         database.setUserConditionByUserId(User.IN_SHELTER, newCat.getUserId());
+    }
+
+    private Integer[] getNewCatsId(Integer[] oldCatsId, Cat newCat){
+        Integer[] newCatsId;
+        if (oldCatsId != null) {
+            newCatsId = new Integer[oldCatsId.length + 1];
+            for (int i = 0; i < oldCatsId.length; i++) {
+                newCatsId[i] = oldCatsId[i];
+            }
+            newCatsId[oldCatsId.length] = newCat.getId();
+        }
+        else {
+            newCatsId = new Integer[1];
+            newCatsId[0] = newCat.getId();
+        }
+        return newCatsId;
     }
 
     private String getShelterName(String message){
@@ -76,6 +64,12 @@ public class CommandEnterToShelter extends Command{
     @SneakyThrows
     private void wrongConditionMessage(Long userId){
         String message = "Чтобы войти в укрытие, вы должны дождаться завершения действия и быть в игре";
+        catBot.execute(SendMessage.builder().text(message).chatId(userId.toString()).build());
+    }
+
+    @SneakyThrows
+    private void congratulationsMessage(Long userId){
+        String message = "Вы успешно вошли в укрытие.";
         catBot.execute(SendMessage.builder().text(message).chatId(userId.toString()).build());
     }
 }

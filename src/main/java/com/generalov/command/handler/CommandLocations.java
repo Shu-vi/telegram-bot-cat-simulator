@@ -12,16 +12,6 @@ public class CommandLocations extends Command{
         super(catBot);
     }
 
-    @SneakyThrows
-    private void locations(Long userId){
-        String[] locations = GetProperties.getSpawnLocations();
-        String text = "";
-        for (int i = 0; i < locations.length; i++) {
-            text += "-" + locations[i] + "\n";
-        }
-        catBot.execute(SendMessage.builder().text(text).chatId(userId.toString()).build());
-    }
-
     public void locations(Update update){
         Long userId = update.getMessage().getChatId();
         Short userCondition = database.getUserById(userId).getCondition();
@@ -32,6 +22,19 @@ public class CommandLocations extends Command{
         }
     }
 
+    @SneakyThrows
+    private void locations(Long userId){
+        String[] locations = GetProperties.getSpawnLocations();
+        String text = "";
+        for (int i = 0; i < locations.length; i++) {
+            text += getFormatLocationName(locations[i]);
+        }
+        catBot.execute(SendMessage.builder().text(text).chatId(userId.toString()).build());
+    }
+
+    private String getFormatLocationName(String location){
+        return "-" + location + "\n";
+    }
     @SneakyThrows
     private void wrongConditionMessage(Long userId){
         String text = "Для этой команды нужно выйти из игры. Пропишите команду \"Выйти из игры\" и введите команду \"Локации\" ещё раз.";

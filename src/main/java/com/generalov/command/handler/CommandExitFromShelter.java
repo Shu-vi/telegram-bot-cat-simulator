@@ -14,7 +14,6 @@ public class CommandExitFromShelter extends Command{
     public CommandExitFromShelter(CatBot catBot){
         super(catBot);
     }
-
     public void exitFromShelter(Update update){
         Long userId = update.getMessage().getChatId();
         Short userCondition = database.getUserById(userId).getCondition();
@@ -24,54 +23,51 @@ public class CommandExitFromShelter extends Command{
         }
     }
 
-    @SneakyThrows
-    private void congratulationMessage(Long userId){
-        String message = "Вы покинули укрытие.";
-        catBot.execute(SendMessage.builder().text(message).chatId(userId.toString()).build());
-    }
-
-
     private void exitFromShelter(Long userId){
         User user = database.getUserById(userId);
         Cat cat = database.getCatByUserIdAndCatStatus(userId, true);
         ArrayList<Shelter> shelters = database.getSheltersByLocationId(cat.getLocationId());
-        /**
-         * Находим нужное нам укрытие с котом.
-         * Выводим кота из укрытия.
-         * Изменяем состояние юзера.
-         */
         Shelter shelter = getShelter(cat, shelters);
         catShelterOut(cat, shelter);
-        changeUserCondition(user);
-    }
-
-    private void changeUserCondition(User user){
         database.setUserConditionByUserId(User.IN_GAME, user.getId());
-    }
-
-
-    private void catShelterOut(Cat cat, Shelter shelter){
-        Integer[] newCats = new Integer[shelter.getCats().length-1];
-        if (shelter.getCats().length>1) {
-            for (int i = 0; i < shelter.getCats().length; i++) {
-                if (cat.getId() != shelter.getCats()[i]) {
-                    newCats[i] = shelter.getCats()[i];
-                }
-            }
-        }
-        shelter.setCats(newCats);
-        database.setShelterByShelterId(shelter);
     }
 
     private Shelter getShelter(Cat cat, ArrayList<Shelter> shelters){
         Integer catId = cat.getId();
         for (int i = 0; i < shelters.size(); i++) {
-                for (int j = 0; j < shelters.get(i).getCats().length; j++) {
-                    if (catId == shelters.get(i).getCats()[j]) {
-                        return shelters.get(i);
-                    }
+            Integer catsSize = shelters.get(i).getCats().length;
+            Shelter shelter = shelters.get(i);
+            for (int j = 0; j < catsSize; j++) {
+                if (isCatsEquals(catId, shelter.getCats()[j])) {
+                    return shelter;
                 }
+            }
         }
         return null;
+    }
+
+    private void catShelterOut(Cat cat, Shelter shelter){
+        Integer[] oldCatsId = shelter.getCats();
+        Integer[] newCatsId = new Integer[oldCatsId.length-1];
+        Integer catId = cat.getId();
+        if (oldCatsId.length>1) {
+            for (int i = 0; i < oldCatsId.length; i++) {
+                if (catId != oldCatsId[i]) {
+                    newCatsId[i] = oldCatsId[i];
+                }
+            }
+        }
+        shelter.setCats(newCatsId);
+        database.setShelterByShelterId(shelter);
+    }
+
+    private Boolean isCatsEquals(Integer catIdFirst, Integer catIdSecond){
+        return catIdFirst == catIdSecond;
+    }
+
+    @SneakyThrows
+    private void congratulationMessage(Long userId){
+        String message = "Вы покинули укрытие.";
+        catBot.execute(SendMessage.builder().text(message).chatId(userId.toString()).build());
     }
 }

@@ -12,6 +12,7 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 public class CommandMoveToLocation extends Command implements Runnable{
     private Update update;
     private CommandAboutLocation commandAboutLocation;
+    //todo нужен рефакторинг
     public CommandMoveToLocation(CatBot catBot, Update update, CommandAboutLocation commandAboutLocation) {
         super(catBot);
         this.update = update;
@@ -24,10 +25,8 @@ public class CommandMoveToLocation extends Command implements Runnable{
         String message = StringHandler.deleteBotName(update.getMessage().getText());
         Short userCondition = database.getUserById(userId).getCondition();
         if (userCondition == User.IN_GAME){
-            database.setUserConditionByUserId(User.MOVING, userId);
             moveToLocation(userId, message);
             commandAboutLocation.aboutLocation(update);
-            database.setUserConditionByUserId(User.IN_GAME, userId);
         } else if (userCondition == User.NOT_IN_GAME) {
             notInGameMessage(userId);
         } else {
@@ -35,24 +34,19 @@ public class CommandMoveToLocation extends Command implements Runnable{
         }
     }
 
-    @SneakyThrows
     private void moveToLocation(Long userId, String message){
-        /**
-         * достаём название локации.
-         * Проверяем, есть ли эта локация в соседних.
-         * Переводим в соседнюю локацию
-         */
-        String locationTitle = normalizeData(getLocationTitle(message));
+        String locationTitle = StringHandler.toUpperCaseFirstChar(getLocationTitle(message));
         Cat cat = database.getCatByUserIdAndCatStatus(userId, true);
         Location currentLocation = database.getLocationByLocationId(cat.getLocationId());
         Integer[] neighboringLocationId = currentLocation.getNeighboringLocationsId();
         Location wishesLocation = database.getLocationByLocationTitle(locationTitle);
         if (isExistLocation(wishesLocation)){
             if (isContains(wishesLocation, neighboringLocationId)){
-                movingMessage(userId);
-                Thread.sleep(30000);
-                editCatParametersDuringMoving(cat, wishesLocation);
-                congratulationMessage(userId, wishesLocation.getTitle());
+                if (!isLowStats(cat))
+                    move(userId, cat, wishesLocation);
+                else
+                    //Нельзя перейти иначе смерть
+                    return;
             }else {
                 notNeighboringLocationMessage(userId);
             }
@@ -62,46 +56,70 @@ public class CommandMoveToLocation extends Command implements Runnable{
     }
 
     @SneakyThrows
-    private void movingMessage(Long userId){
-        String message = "Начался переход в другую локацию, это займёт 30 секунд.";
-        catBot.execute(SendMessage.builder().chatId(userId.toString()).text(message).build());
+    private void move(Long userId, Cat cat, Location wishesLocation){
+        database.setUserConditionByUserId(User.MOVING, userId);
+        movingMessage(userId);
+        Thread.sleep(30000);
+        editCatParametersDuringMoving(cat, wishesLocation);
+        database.setUserConditionByUserId(User.IN_GAME, userId);
+        congratulationMessage(userId, wishesLocation.getTitle());
     }
 
     private void editCatParametersDuringMoving(Cat cat, Location location){
         cat.setLocationId(location.getId());
-        if (cat.getStamina() > 3){
-            cat.setStamina(cat.getStamina() - 3);
-        } else {
-            //Нельзя перейти, не хватает стамины
-            return;
-        }
-        if (cat.getHealth() > 1){
-            cat.setHealth(cat.getHealth() - 1);
-        } else {
-            //Нельзя перейти, мало здоровья
-            return;
-        }
-        if (cat.getSatiety() > 10){
-            cat.setSatiety(cat.getSatiety() - 10);
-        }else {
-            //нельзя перейти, мало еды
-            return;
-        }
-        if (cat.getWater() > 7){
-            cat.setWater(cat.getWater() - 7);
-        }else {
-            //Нельзя перейтиЮ мало воды
-            return;
-        }
+        cat.setStamina(cat.getStamina() - 3);
+        cat.setHealth(cat.getHealth() - 1);
+        cat.setSatiety(cat.getSatiety() - 10);
+        cat.setWater(cat.getWater() - 7);
         database.setCat(cat);
     }
 
+    /**
+     * ----------------------------------------------------------
+     * Методы форматирования строк
+     */
+
+    private String getLocationTitle(String message){
+        return message.substring(8);
+    }
+
+    /**
+     * ----------------------------------------------------------
+     * Булевые методы проверки условий
+     */
+
+    private Boolean isExistLocation(Location location){
+        return location != null;
+    }
+
+    private Boolean isContains(Location wishesLocation, Integer[] checkingLocation){
+        boolean flag = false;
+        for (Integer integer : checkingLocation) {
+            flag = flag || integer == wishesLocation.getId();
+        }
+        return flag;
+    }
+
+    private Boolean isLowStats(Cat cat){
+        return cat.getStamina() <= 3 || cat.getHealth() <= 1 || cat.getWater() <= 7 || cat.getSatiety() <= 10;
+    }
+
+    /**
+     * ------------------------------------------------------
+     * Методы отправки сообщений
+     */
+
     @SneakyThrows
-    private void congratulationMessage(Long userId, String locationTitle){
-        String message = "Вы успешно перешли в локацию " + locationTitle + ".";
+    private void notExistLocationMessage(Long userId){
+        String message = "Такой локации не существует.";
         catBot.execute(SendMessage.builder().chatId(userId.toString()).text(message).build());
     }
 
+    @SneakyThrows
+    private void notNeighboringLocationMessage(Long userId){
+        String message = "Вы не можете пойти в данную локацию, поскольку она не граничит с той локацией, в которой находитесь вы.";
+        catBot.execute(SendMessage.builder().chatId(userId.toString()).text(message).build());
+    }
 
     @SneakyThrows
     private void notInGameMessage(Long userId){
@@ -115,36 +133,15 @@ public class CommandMoveToLocation extends Command implements Runnable{
         catBot.execute(SendMessage.builder().chatId(userId.toString()).text(message).build());
     }
 
-    private String normalizeData(String message){
-        return Character.toUpperCase(message.charAt(0)) + message.substring(1).toLowerCase();
-    }
-
-
-    private String getLocationTitle(String message){
-        return message.substring(8);
-    }
-
-    private Boolean isExistLocation(Location location){
-        return location != null;
-    }
-
-    private Boolean isContains(Location wishesLocation, Integer[] checkingLocation){
-        Boolean flag = false;
-        for (int i = 0; i < checkingLocation.length; i++) {
-            flag = flag || checkingLocation[i] == wishesLocation.getId();
-        }
-        return flag;
-    }
-
     @SneakyThrows
-    private void notExistLocationMessage(Long userId){
-        String message = "Такой локации не существует.";
+    private void congratulationMessage(Long userId, String locationTitle){
+        String message = "Вы успешно перешли в локацию " + locationTitle + ".";
         catBot.execute(SendMessage.builder().chatId(userId.toString()).text(message).build());
     }
 
     @SneakyThrows
-    private void notNeighboringLocationMessage(Long userId){
-        String message = "Вы не можете пойти в данную локацию, поскольку она не граничит с той локацией, в которой находитесь вы.";
+    private void movingMessage(Long userId){
+        String message = "Начался переход в другую локацию, это займёт 30 секунд.";
         catBot.execute(SendMessage.builder().chatId(userId.toString()).text(message).build());
     }
 }

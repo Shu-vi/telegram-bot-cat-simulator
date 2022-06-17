@@ -16,25 +16,6 @@ public class CommandDrink extends Command implements Runnable{
         this.update = update;
     }
 
-    @SneakyThrows
-    private void drink(){
-        Long userId = update.getMessage().getChatId();
-        Cat cat = database.getCatByUserIdAndCatStatus(userId, true);
-        Location location = database.getLocationByLocationId(cat.getLocationId());
-        Long waitingTimeMillis = Long.valueOf(calculateMillisOfDrinking(cat));
-        if (isExistWater(location)){
-            drinkingMessage(waitingTimeMillis);
-            database.setUserConditionByUserId(User.DRINKING, userId);
-            Thread.sleep(waitingTimeMillis);
-            cat.setWater(100);
-            database.setCat(cat);
-            database.setUserConditionByUserId(User.IN_GAME, userId);
-            congratulationMessage();
-        } else {
-            waterIsNotExistMessage();
-        }
-    }
-
     @Override
     public void run() {
         User user = database.getUserById(update.getMessage().getChatId());
@@ -46,6 +27,29 @@ public class CommandDrink extends Command implements Runnable{
         } else {
             otherConditionsMessage();
         }
+    }
+
+    private void drink(){
+        Long userId = update.getMessage().getChatId();
+        Cat cat = database.getCatByUserIdAndCatStatus(userId, true);
+        Location location = database.getLocationByLocationId(cat.getLocationId());
+        Long waitingTimeMillis = Long.valueOf(calculateMillisOfDrinking(cat));
+        if (isExistWater(location)){
+            doDrinking(waitingTimeMillis, userId, cat);
+            congratulationMessage();
+        } else {
+            waterIsNotExistMessage();
+        }
+    }
+
+    @SneakyThrows
+    private void doDrinking(Long waitingTimeMillis, Long userId, Cat cat){
+        drinkingMessage(waitingTimeMillis);
+        database.setUserConditionByUserId(User.DRINKING, userId);
+        Thread.sleep(waitingTimeMillis);
+        cat.setWater(100);
+        database.setCat(cat);
+        database.setUserConditionByUserId(User.IN_GAME, userId);
     }
 
     private Boolean isExistWater(Location location){

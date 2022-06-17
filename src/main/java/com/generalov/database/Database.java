@@ -1,9 +1,6 @@
 package com.generalov.database;
 
-import com.generalov.database.entity.Cat;
-import com.generalov.database.entity.Location;
-import com.generalov.database.entity.Shelter;
-import com.generalov.database.entity.User;
+import com.generalov.database.entity.*;
 import com.generalov.properties.GetProperties;
 import lombok.SneakyThrows;
 
@@ -455,11 +452,29 @@ public class Database {
         disconnectBD();
     }
 
+    @SneakyThrows
+    public synchronized Breed getBreed(String breedTitle){
+        connectToDB();
+        Breed breed = null;
+        PreparedStatement statement = connection.prepareStatement("select * from breed where title = ?");
+        statement.setString(1, breedTitle);
+        ResultSet result = statement.executeQuery();
+        while (result.next()){
+            breed = new Breed(
+                    result.getInt("id"),
+                    result.getString("title"),
+                    result.getInt("max_health"),
+                    result.getInt("max_stamina"),
+                    result.getInt("max_water"),
+                    result.getInt("max_satiety")
+            );
+        }
+        disconnectBD();
+        return breed;
+    }
+
     public static void main(String[] args) {
         Database database = Database.getObjectDatabaseControl();
-//        Integer[] cats = {2, 4};
-//        Shelter shelter = new Shelter(5, "Пещера", 10, 2, null);
-//        database.setShelterByShelterId(shelter);
-        Shelter shelter = database.getShelterByShelterTitle("Пещера");
+
     }
 }

@@ -10,8 +10,8 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
+import org.telegram.telegrambots.meta.api.objects.webapp.WebAppInfo;
 import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -92,7 +92,6 @@ public class CatBot extends TelegramLongPollingBot {
         }
     }
 
-    //TODO доделать весь список команд
     /**
      * Метод обрабатывает введённые текстовые команды.
      */
@@ -205,6 +204,9 @@ public class CatBot extends TelegramLongPollingBot {
         buttonsRow2.add(InlineKeyboardButton.builder().text("Восстановить здоровье").switchInlineQueryCurrentChat("Излечиться травой").build());
         buttonsRow2.add(InlineKeyboardButton.builder().text("Смена локации").switchInlineQueryCurrentChat("Пойти в НазваниеЛокации").build());
         buttonsRow2.add(InlineKeyboardButton.builder().text("Зайти в укрытие").switchInlineQueryCurrentChat("Зайти в укрытие НазваниеУкрытия").build());
+        /**
+         * Третий ряд кнопок
+         */
         List<InlineKeyboardButton> buttonsRow3 = new ArrayList<>();
         buttonsRow3.add(InlineKeyboardButton.builder().text("Выйти из укрытия").switchInlineQueryCurrentChat("Выйти из укрытия").build());
         buttonsRow3.add(InlineKeyboardButton.builder().text("Спать").switchInlineQueryCurrentChat("Спать").build());

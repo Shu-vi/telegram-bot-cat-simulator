@@ -14,33 +14,15 @@ public class CommandSleep extends Command implements Runnable{
         this.update = update;
     }
 
-    @SneakyThrows
-    private void sleep(){
-        Long userId = update.getMessage().getChatId();
-        Cat cat = database.getCatByUserIdAndCatStatus(userId, true);
-        Long waitingTimeMillis = calculateWaitingTimeMillis(cat.getStamina());
-        if (waitingTimeMillis > 0){
-            database.setUserConditionByUserId(User.SLEEPING, userId);
-            cat.setStamina(100);
-            database.setCat(cat);
-            catSleepingMessage(waitingTimeMillis);
-            Thread.sleep(waitingTimeMillis);
-            database.setUserConditionByUserId(User.IN_SHELTER, userId);
-            catWakeupMessage();
-        } else {
-            catAwakeMessage();
-        }
-        /**
-         * Проверить, где находится кот. Если в укрытии, то лечь спать.
-         * Проснуться по истечение времени N.
-         * Сообщить чё-то пользователю
-         */
-    }
-
+    /**
+     * Вызывает методы в зависимости от состояния пользователя. Если пользователь в укрытии,
+     * то вызывает метод сна. Если пользователь в игре, но не в укрытии, то сообщает об этом.
+     * Если пользователь не в игре, то сообщает об этом. Если пользователь имеет некое другое состояние,
+     * то сообщает об этом ему.
+     */
     @Override
     public void run() {
-        User user = database.getUserById(update.getMessage().getChatId());
-        Short userCondition = user.getCondition();
+        Short userCondition = database.getUserById(update.getMessage().getChatId()).getCondition();
         if (userCondition == User.IN_SHELTER) {
             sleep();
         } else if (userCondition == User.IN_GAME) {
@@ -52,10 +34,70 @@ public class CommandSleep extends Command implements Runnable{
         }
     }
 
+    /**
+     * Метод отвечает за сон и отправляет пользователя в сон, если в этом есть необходимость, иначе сообщает,
+     * что пользователю не нужен сон.
+     */
+    private void sleep(){
+        Long userId = update.getMessage().getChatId();
+        Cat cat = database.getCatByUserIdAndCatStatus(userId, true);
+        Long waitingTimeMillis = calculateWaitingTimeMillis(cat.getStamina());
+        if (isCanSleep(waitingTimeMillis)){
+            sleeping(cat, waitingTimeMillis, userId);
+        } else {
+            catAwakeMessage();
+        }
+    }
+
+    /**
+     * Метод "усыпляет кота". Изменяет состояние пользователя, восстанавливает выносливость
+     * коту, выводит сообщения о действиях, которые происходят, усыпляет поток на некоторое
+     * время и возвращает состояние на те, что были ранее, выводя сообщение о завершении действий.
+     * Здесь же происходит работа с БД.
+     */
+    @SneakyThrows
+    private void sleeping(Cat cat, Long waitingTimeMillis, Long userId){
+        database.setUserConditionByUserId(User.SLEEPING, userId);
+        cat.setStamina(100);
+        database.setCat(cat);
+        catSleepingMessage(waitingTimeMillis);
+        Thread.sleep(waitingTimeMillis);
+        database.setUserConditionByUserId(User.IN_SHELTER, userId);
+        catWakeupMessage();
+    }
+
+    /**
+     * ------------------------------------------------------------------
+     * Методы промежуточных вычислений
+     */
+
+    /**
+     * Считает время сна в миллисекундах по формуле: (МаксимальнаяВыносливость - ТекущаяВыносливость) * 6000;
+     */
     private Long calculateWaitingTimeMillis(Integer catStamina){
         return (100 - catStamina) * 6000L;
     }
 
+    /**
+     * ---------------------------------------------------------------------
+     * Булевы методы, отвечающие за проверку условий
+     */
+
+    /**
+     * Возвращает True, если у пользователя неполная выносливость и он может спать.
+     */
+    private Boolean isCanSleep(Long waitingTimeMillis){
+        return waitingTimeMillis > 0;
+    }
+
+    /**
+     * --------------------------------------------------------------------
+     * Методы отправки сообщений
+     */
+
+    /**
+     * Отправляет пользователю сообщение о том, что его кот лёг спать, указывая время в секундах, сколько кот будет спать.
+     */
     @SneakyThrows
     private void catSleepingMessage(Long waitingTimeMillis){
         Long userId = update.getMessage().getChatId();
@@ -63,6 +105,9 @@ public class CommandSleep extends Command implements Runnable{
         catBot.execute(SendMessage.builder().chatId(userId.toString()).text(message).build());
     }
 
+    /**
+     * Отправляет пользователю сообщение о том, что его кот проснулся и выносливость восстановлена.
+     */
     @SneakyThrows
     private void catWakeupMessage(){
         Long userId = update.getMessage().getChatId();
@@ -70,6 +115,11 @@ public class CommandSleep extends Command implements Runnable{
         catBot.execute(SendMessage.builder().chatId(userId.toString()).text(message).build());
     }
 
+    /**
+     * Отправляет пользователю сообщение о том, что у него полная выносливость
+     * (Срабатывает, если пользователь пытается поспать
+     * с полной выносливостью).
+     */
     @SneakyThrows
     private void catAwakeMessage(){
         Long userId = update.getMessage().getChatId();
@@ -77,6 +127,9 @@ public class CommandSleep extends Command implements Runnable{
         catBot.execute(SendMessage.builder().chatId(userId.toString()).text(message).build());
     }
 
+    /**
+     * Отправляет пользователю сообщение о том, что он не в игре.
+     */
     @SneakyThrows
     private void notInGameMessage(){
         Long userId = update.getMessage().getChatId();
@@ -84,6 +137,10 @@ public class CommandSleep extends Command implements Runnable{
         catBot.execute(SendMessage.builder().chatId(userId.toString()).text(message).build());
     }
 
+    /**
+     * Отправляет пользователю сообщение, что он не может лечь спать, не зайдя в укрытие. Срабатывает,
+     *  когда пользователь в игре, но не в укрытии.
+     */
     @SneakyThrows
     private void inGameMessage(){
         Long userId = update.getMessage().getChatId();
@@ -91,6 +148,10 @@ public class CommandSleep extends Command implements Runnable{
         catBot.execute(SendMessage.builder().chatId(userId.toString()).text(message).build());
     }
 
+    /**
+     * Срабатывает, если пользователь пытается поспать во всех других нестандартных случаях и говорит ему, что
+     * он не может сделать это сейчас.
+     */
     @SneakyThrows
     private void otherConditionsMessage(){
         Long userId = update.getMessage().getChatId();

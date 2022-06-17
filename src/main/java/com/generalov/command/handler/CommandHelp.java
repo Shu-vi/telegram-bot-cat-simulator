@@ -22,7 +22,7 @@ public class CommandHelp extends Command{
         Short condition = database.getUserById(userId).getCondition();
         if (condition == User.NOT_IN_GAME){
             helpOutGame(userId);
-        } else {
+        } else{
             helpInGame(userId);
         }
     }

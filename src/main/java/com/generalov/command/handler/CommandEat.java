@@ -16,30 +16,6 @@ public class CommandEat extends Command implements Runnable{
         this.update = update;
     }
 
-    @SneakyThrows
-    public void eat(){
-        Long userId = update.getMessage().getChatId();
-        Cat cat = database.getCatByUserIdAndCatStatus(userId, true);
-        Location location = database.getLocationByLocationId(cat.getLocationId());
-        Long waitingTimeMillis = Long.valueOf(calculateMillisOfEating());
-        if (isExistFood(location)){
-            eatingMessage(waitingTimeMillis);
-            database.setUserConditionByUserId(User.EATING, userId);
-            Thread.sleep(waitingTimeMillis);
-            cat.setSatiety(Math.min(cat.getSatiety() + 10, 100));
-            database.setCat(cat);
-            database.setUserConditionByUserId(User.IN_GAME, userId);
-            congratulationMessage();
-        } else {
-            foodIsNotExistMessage();
-        }
-        /**
-         * Проверить наличие еды на локации.
-         * Если еда есть, то восстановить еду на 10 и поставить таймер.
-         * Если еды нет, то написать об этом.
-         */
-    }
-
     @Override
     public void run() {
         User user = database.getUserById(update.getMessage().getChatId());
@@ -53,6 +29,28 @@ public class CommandEat extends Command implements Runnable{
         }
     }
 
+    private void eat(){
+        Long userId = update.getMessage().getChatId();
+        Cat cat = database.getCatByUserIdAndCatStatus(userId, true);
+        Location location = database.getLocationByLocationId(cat.getLocationId());
+        Long waitingTimeMillis = Long.valueOf(calculateMillisOfEating());
+        if (isExistFood(location)){
+            doEat(waitingTimeMillis, userId, cat);
+            congratulationMessage();
+        } else {
+            foodIsNotExistMessage();
+        }
+    }
+
+    @SneakyThrows
+    private void doEat(Long waitingTimeMillis, Long userId, Cat cat){
+        eatingMessage(waitingTimeMillis);
+        database.setUserConditionByUserId(User.EATING, userId);
+        Thread.sleep(waitingTimeMillis);
+        cat.setSatiety(Math.min(cat.getSatiety() + 10, 100));
+        database.setCat(cat);
+        database.setUserConditionByUserId(User.IN_GAME, userId);
+    }
 
     private Boolean isExistFood(Location location){
         return location.getFoodId() != null;

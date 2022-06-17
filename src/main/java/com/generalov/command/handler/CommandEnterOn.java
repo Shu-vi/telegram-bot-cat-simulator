@@ -12,20 +12,6 @@ public class CommandEnterOn extends Command{
         super(catBot);
     }
 
-    private void enterOn(String message, Long userId){
-        //Изменить статус у кота и у игрока
-        String catName = getCatName(message);
-        Integer catId = database.getCatByCatNameAndUserId(catName, userId).getId();
-        if (isCatExist(catId)){
-            database.setUserConditionByUserId(User.IN_GAME, userId);
-            database.setCatOnlineStatus(true, catId);
-            congratulationMessage(userId);
-            //вывести информацию о локации
-        } else {
-            catNotExistMessage(userId);
-        }
-    }
-
     public void enterOn(Update update){
         Long userId = update.getMessage().getChatId();
         String message = StringHandler.deleteBotName(update.getMessage().getText());
@@ -37,8 +23,34 @@ public class CommandEnterOn extends Command{
         }
     }
 
+    private void enterOn(String message, Long userId){
+        String catName = getCatName(message);
+        Integer catId = database.getCatByCatNameAndUserId(catName, userId).getId();
+        if (isCatExist(catId)){
+            changeConditions(userId, catId);
+            congratulationMessage(userId);
+        } else {
+            catNotExistMessage(userId);
+        }
+    }
+
     private String getCatName(String message){
         return message.substring(9);
+    }
+
+    private Boolean isCatExist(Integer catId){
+        return catId!=null;
+    }
+
+    private void changeConditions(Long userId, Integer catId){
+        database.setUserConditionByUserId(User.IN_GAME, userId);
+        database.setCatOnlineStatus(true, catId);
+    }
+
+    @SneakyThrows
+    private void catNotExistMessage(Long userId){
+        String message = "У вас нет кота с таким именем. Попробуйте ввести \"Мои коты\", чтобы посмотреть список ваших котов.";
+        catBot.execute(SendMessage.builder().chatId(userId.toString()).text(message).build());
     }
 
     @SneakyThrows
@@ -51,15 +63,5 @@ public class CommandEnterOn extends Command{
     private void congratulationMessage(Long userId){
         String text = "Вы успешно зашли в игру.";
         catBot.execute(SendMessage.builder().chatId(userId.toString()).text(text).build());
-    }
-
-    private Boolean isCatExist(Integer catId){
-        return catId!=null;
-    }
-
-    @SneakyThrows
-    private void catNotExistMessage(Long userId){
-        String message = "У вас нет кота с таким именем. Попробуйте ввести \"Мои коты\", чтобы посмотреть список ваших котов.";
-        catBot.execute(SendMessage.builder().chatId(userId.toString()).text(message).build());
     }
 }

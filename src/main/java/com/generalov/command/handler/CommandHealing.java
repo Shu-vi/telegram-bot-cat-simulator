@@ -16,30 +16,6 @@ public class CommandHealing extends Command implements Runnable{
         this.update = update;
     }
 
-    @SneakyThrows
-    private void healing(){
-        Long userId = update.getMessage().getChatId();
-        Cat cat = database.getCatByUserIdAndCatStatus(userId, true);
-        Location location = database.getLocationByLocationId(cat.getLocationId());
-        Long waitingTimeMillis = Long.valueOf(calculateMillisOfHealing());
-        if (isCanHealing(location)){
-            healingMessage(waitingTimeMillis);
-            database.setUserConditionByUserId(User.HEALING, userId);
-            Thread.sleep(waitingTimeMillis);
-            cat.setHealth(Math.min(cat.getHealth() + 7, 100));
-            database.setCat(cat);
-            database.setUserConditionByUserId(User.IN_GAME, userId);
-            congratulationMessage();
-        } else {
-            healingIsNotExistMessage();
-        }
-        /**
-         * Проверка наличия лекарств на локации
-         * если они есть, восстановить хп, и убрать растение
-         * Если лекарств нет, то сообщить об этом.
-         */
-    }
-
     @Override
     public void run() {
         User user = database.getUserById(update.getMessage().getChatId());
@@ -51,6 +27,31 @@ public class CommandHealing extends Command implements Runnable{
         } else {
             otherConditionsMessage();
         }
+    }
+
+    @SneakyThrows
+    private void healing(){
+        Long userId = update.getMessage().getChatId();
+        Cat cat = database.getCatByUserIdAndCatStatus(userId, true);
+        Location location = database.getLocationByLocationId(cat.getLocationId());
+        Long waitingTimeMillis = Long.valueOf(calculateMillisOfHealing());
+        if (isCanHealing(location)){
+            doHealing(waitingTimeMillis, cat);
+        } else {
+            healingIsNotExistMessage();
+        }
+    }
+
+    @SneakyThrows
+    private void doHealing(Long waitingTimeMillis, Cat cat){
+        Long userId = update.getMessage().getChatId();
+        healingMessage(waitingTimeMillis);
+        database.setUserConditionByUserId(User.HEALING, userId);
+        Thread.sleep(waitingTimeMillis);
+        cat.setHealth(Math.min(cat.getHealth() + 7, 100));
+        database.setCat(cat);
+        database.setUserConditionByUserId(User.IN_GAME, userId);
+        congratulationMessage();
     }
 
     /**
