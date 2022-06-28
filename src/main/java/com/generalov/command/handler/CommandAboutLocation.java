@@ -1,22 +1,29 @@
 package com.generalov.command.handler;
 
 import com.generalov.CatBot;
+import com.generalov.database.Database;
 import com.generalov.database.entity.Cat;
 import com.generalov.database.entity.Location;
 import com.generalov.database.entity.Shelter;
 import com.generalov.database.entity.User;
 import lombok.SneakyThrows;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import java.util.ArrayList;
 
+@Component
+@Scope(value = "singleton")
 public class CommandAboutLocation extends Command{
-    public CommandAboutLocation(CatBot catBot) {
-        super(catBot);
+    @Autowired
+    public CommandAboutLocation(CatBot catBot, Database database) {
+        super(catBot, database);
     }
 
-    @SneakyThrows
-    public void aboutLocation(Update update){
+    @Override
+    public void useCommand(Update update) {
         Long userId = update.getMessage().getChatId();
         Short condition = database.getUserById(userId).getCondition();
         if (condition != User.NOT_IN_GAME){

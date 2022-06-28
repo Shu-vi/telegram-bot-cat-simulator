@@ -1,37 +1,27 @@
 package com.generalov.database;
 
+import com.generalov.CatBot;
 import com.generalov.database.entity.*;
-import com.generalov.properties.GetProperties;
 import lombok.SneakyThrows;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Component;
 
 import java.sql.*;
 import java.util.ArrayList;
 
+@Component
+@Scope("singleton")
 public class Database {
-    private static final String db_username = GetProperties.getDBUsername();
-    private static final String db_url = GetProperties.getDBUrl();
-    private static final String db_password = GetProperties.getDBPassword();
+    @Value("${databaseUsername}")
+    private String db_username;
+    @Value("${databaseUrl}")
+    private String db_url;
+    @Value("${databasePassword}")
+    private String db_password;
     private Connection connection;
-    /**
-     * Singleton класс
-     */
-    private volatile static Database database;
 
-    private Database(){}
 
-    /**
-     * @return возвращает единственный экзэмпляр класса.
-     */
-    public static Database getObjectDatabaseControl(){
-        if (database == null){
-            synchronized (Database.class){
-                if (database == null){
-                    database = new Database();
-                }
-            }
-        }
-        return database;
-    }
 
     /**
      * Подключение к БД
@@ -471,10 +461,5 @@ public class Database {
         }
         disconnectBD();
         return breed;
-    }
-
-    public static void main(String[] args) {
-        Database database = Database.getObjectDatabaseControl();
-
     }
 }

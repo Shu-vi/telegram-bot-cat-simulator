@@ -1,45 +1,37 @@
 package com.generalov;
 
-import com.generalov.command.handler.*;
-import com.generalov.properties.GetProperties;
+import com.generalov.command.handler.Command;
+import com.generalov.properties.SpringConfig;
 import com.generalov.string.handler.StringHandler;
 import lombok.SneakyThrows;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.TelegramBotsApi;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
-import org.telegram.telegrambots.meta.api.objects.webapp.WebAppInfo;
 import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
-import java.util.ArrayList;
-import java.util.List;
 
+@Component
+@Scope("singleton")
 public class CatBot extends TelegramLongPollingBot {
     private MessageType messageType;
-    /**
-     * Объект клавиатуры для команды /help
-     */
-    private InlineKeyboardMarkup outGameKeyboard;
-    /**
-     * Объект клавиатуры для команды /help
-     */
-    private InlineKeyboardMarkup inGameKeyboard;
-
-
-    public CatBot(){
-        initOutGameKeyboard();
-        initInGameKeyboard();
-    }
+    @Value("${botUsername}")
+    private String botUsername;
+    @Value("${botToken}")
+    private String botToken;
+    public final static AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(SpringConfig.class);
 
     @Override
     public String getBotUsername() {
-        return GetProperties.getBotUsername();
+        return botUsername;
     }
 
     @Override
     public String getBotToken() {
-        return GetProperties.getToken();
+        return botToken;
     }
 
     @Override
@@ -100,48 +92,47 @@ public class CatBot extends TelegramLongPollingBot {
         message = StringHandler.deleteBotName(message);
         switch (message) {
             case "/help":
-                new CommandHelp(this, outGameKeyboard, inGameKeyboard).help(update);
+                context.getBean("commandHelp", Command.class).useCommand(update);
                 return;
             case "Мои коты":
-                new CommandMyCats(this).myCats(update);
+                context.getBean("commandMyCats", Command.class).useCommand(update);
                 return;
             case "/start":
-                new CommandStart(this).start(update);
+                context.getBean("commandStart", Command.class).useCommand(update);
                 return;
             case "Локации":
-                new CommandLocations(this).locations(update);
+                context.getBean("commandLocations", Command.class).useCommand(update);
                 return;
             case"О локации":
-                new CommandAboutLocation(this).aboutLocation(update);
+                context.getBean("commandAboutLocation", Command.class).useCommand(update);
                 return;
             case "Съесть дичь":
-                new Thread(new CommandEat(this, update)).start();
+                context.getBean("commandEat", Command.class).useCommand(update);
                 return;
             case "Попить воды":
-                new Thread(new CommandDrink(this, update)).start();
+                context.getBean("commandDrink", Command.class).useCommand(update);
                 return;
             case "Излечиться травой":
-                new Thread(new CommandHealing(this, update)).start();
+                context.getBean("commandHealing", Command.class).useCommand(update);
                 return;
             case "Спать":
-                new Thread(new CommandSleep(this, update)).start();
+                context.getBean("commandSleep", Command.class).useCommand(update);
                 return;
             case "Выйти из укрытия":
-                new CommandExitFromShelter(this).exitFromShelter(update);
+                context.getBean("commandExitFromShelter", Command.class).useCommand(update);
                 return;
             case "Выйти из игры":
-                new CommandExitFromGame(this).exitFromGame(update);
+                context.getBean("commandExitFromGame", Command.class).useCommand(update);
                 return;
             default:
                 if (message.matches("^(С|с)оздать кота: ([А-яA-z]+)\\nПорода: ((Д|д)линнолапый|(К|к)репкий|(М|м)ускулистый)\\nЛокация: ([А-я]+)\\nПол: (((К|к)от)|((К|к)ошка))$")){
-                    new CommandCreateCat(this).createCat(update);
+                    context.getBean("commandCreateCat", Command.class).useCommand(update);
                 } else if (message.matches("^Зайти на ([А-яA-z]+)$")) {
-                    new CommandEnterOn(this).enterOn(update);
-                    new CommandAboutLocation(this).aboutLocation(update);
+                    context.getBean("commandEnterOn", Command.class).useCommand(update);
                 } else if (message.matches("^Пойти в ([А-я]+)$")) {
-                    new Thread(new CommandMoveToLocation(this, update, new CommandAboutLocation(this))).start();
+                    context.getBean("commandMoveToLocation", Command.class).useCommand(update);
                 } else if (message.matches("^Зайти в укрытие ([А-я ]+)$")) {
-                    new CommandEnterToShelter(this).enterToShelter(update);
+                    context.getBean("commandEnterToShelter", Command.class).useCommand(update);
                 }
                 return;
         }
@@ -156,77 +147,10 @@ public class CatBot extends TelegramLongPollingBot {
         execute(SendMessage.builder().chatId(update.getMessage().getChatId().toString()).text("Действие нераспознано. Пожалуйста, вызовите помощь командой /help").build());
     }
 
-    /**
-     * Клавиатура для команды помощи вне игры.
-     */
-    private void initOutGameKeyboard(){
-        outGameKeyboard = new InlineKeyboardMarkup();
-        /**
-         * Первый ряд кнопок
-         */
-        List<InlineKeyboardButton> buttonsRow1 = new ArrayList<>();
-        buttonsRow1.add(InlineKeyboardButton.builder().text("Мои коты").switchInlineQueryCurrentChat("Мои коты").build());
-        buttonsRow1.add(InlineKeyboardButton.builder().text("Локации для спавна").switchInlineQueryCurrentChat("Локации").build());
-        /**
-         * Второй ряд кнопок
-         */
-        List<InlineKeyboardButton> buttonsRow2 = new ArrayList<>();
-        buttonsRow2.add(InlineKeyboardButton.builder().text("Создать кота").switchInlineQueryCurrentChat("Создать кота: ИмяКота\nПорода: длиннолапый\nЛокация: Деревня\nПол: кот").build());
-        buttonsRow2.add(InlineKeyboardButton.builder().text("Зайти в игру").switchInlineQueryCurrentChat("Зайти на ИмяКота").build());
-        /**
-         * Объединение рядов
-         */
-        List<List<InlineKeyboardButton>> rowArrayList = new ArrayList<>();
-        rowArrayList.add(buttonsRow1);
-        rowArrayList.add(buttonsRow2);
-        /**
-         * Добавление рядов в объект клавиатуры
-         */
-        outGameKeyboard.setKeyboard(rowArrayList);
-    }
-
-    /**
-     * Клавиатура для команды помощи в игре.
-     */
-    private void initInGameKeyboard(){
-        inGameKeyboard = new InlineKeyboardMarkup();
-        /**
-         * Первый ряд кнопок
-         */
-        List<InlineKeyboardButton> buttonsRow1 = new ArrayList<>();
-        buttonsRow1.add(InlineKeyboardButton.builder().text("О текущей локации").switchInlineQueryCurrentChat("О локации").build());
-        buttonsRow1.add(InlineKeyboardButton.builder().text("Покушать").switchInlineQueryCurrentChat("Съесть дичь").build());
-        buttonsRow1.add(InlineKeyboardButton.builder().text("Попить").switchInlineQueryCurrentChat("Попить воды").build());
-        /**
-         * Второй ряд кнопок
-         */
-        List<InlineKeyboardButton> buttonsRow2 = new ArrayList<>();
-        buttonsRow2.add(InlineKeyboardButton.builder().text("Восстановить здоровье").switchInlineQueryCurrentChat("Излечиться травой").build());
-        buttonsRow2.add(InlineKeyboardButton.builder().text("Смена локации").switchInlineQueryCurrentChat("Пойти в НазваниеЛокации").build());
-        buttonsRow2.add(InlineKeyboardButton.builder().text("Зайти в укрытие").switchInlineQueryCurrentChat("Зайти в укрытие НазваниеУкрытия").build());
-        /**
-         * Третий ряд кнопок
-         */
-        List<InlineKeyboardButton> buttonsRow3 = new ArrayList<>();
-        buttonsRow3.add(InlineKeyboardButton.builder().text("Выйти из укрытия").switchInlineQueryCurrentChat("Выйти из укрытия").build());
-        buttonsRow3.add(InlineKeyboardButton.builder().text("Спать").switchInlineQueryCurrentChat("Спать").build());
-        buttonsRow3.add(InlineKeyboardButton.builder().text("Выйти из игры").switchInlineQueryCurrentChat("Выйти из игры").build());
-        /**
-         * Объединение рядов
-         */
-        List<List<InlineKeyboardButton>> rowArrayList = new ArrayList<>();
-        rowArrayList.add(buttonsRow1);
-        rowArrayList.add(buttonsRow2);
-        rowArrayList.add(buttonsRow3);
-        /**
-         * Добавление рядов в объект клавиатуры
-         */
-        inGameKeyboard.setKeyboard(rowArrayList);
-    }
 
     @SneakyThrows
     public static void main(String[] args){
-        CatBot catBot = new CatBot();
+        CatBot catBot = CatBot.context.getBean("catBot", CatBot.class);
         TelegramBotsApi telegramBotsApi = new TelegramBotsApi(DefaultBotSession.class);
         telegramBotsApi.registerBot(catBot);
     }

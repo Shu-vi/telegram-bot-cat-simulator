@@ -1,24 +1,32 @@
 package com.generalov.command.handler;
 
 import com.generalov.CatBot;
+import com.generalov.database.Database;
 import com.generalov.database.entity.Cat;
 import com.generalov.database.entity.Location;
 import com.generalov.database.entity.User;
 import com.generalov.string.handler.StringHandler;
 import lombok.SneakyThrows;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 
+@Component
+@Scope(value = "singleton")
 public class CommandCreateCat extends Command{
-    public CommandCreateCat(CatBot catBot){
-        super(catBot);
+    @Autowired
+    public CommandCreateCat(CatBot catBot, Database database) {
+        super(catBot, database);
     }
 
     /**
      * Передаёт создание кота в другой метод, но делает это если пользователь сейчас не в игре и у пользователя меньше 3 котов.
      * Если условие не выполняется, то сообщает пользователю об ошибке.
      */
-    public void createCat(Update update){
+    @Override
+    public void useCommand(Update update) {
         Long userId = update.getMessage().getChatId();
         String message = StringHandler.deleteBotName(update.getMessage().getText());
         if (isCanCreateCat(userId)){
@@ -180,7 +188,7 @@ public class CommandCreateCat extends Command{
      */
     @SneakyThrows
     private void catLimitOrInGameMessage(Long userId){
-        String text = "Превышен лимит котов(3 максимум) или вы сейчас в игре.";
+        String text = "Превышен лимит котов(1 максимум) или вы сейчас в игре.";
         catBot.execute(SendMessage.builder().text(text).chatId(userId.toString()).build());
     }
 

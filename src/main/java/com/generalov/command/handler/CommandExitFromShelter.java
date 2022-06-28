@@ -1,20 +1,29 @@
 package com.generalov.command.handler;
 
 import com.generalov.CatBot;
+import com.generalov.database.Database;
 import com.generalov.database.entity.Cat;
 import com.generalov.database.entity.Shelter;
 import com.generalov.database.entity.User;
 import lombok.SneakyThrows;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 
 import java.util.ArrayList;
 
+@Component
+@Scope(value = "singleton")
 public class CommandExitFromShelter extends Command{
-    public CommandExitFromShelter(CatBot catBot){
-        super(catBot);
+    @Autowired
+    public CommandExitFromShelter(CatBot catBot, Database database) {
+        super(catBot, database);
     }
-    public void exitFromShelter(Update update){
+
+    @Override
+    public void useCommand(Update update) {
         Long userId = update.getMessage().getChatId();
         Short userCondition = database.getUserById(userId).getCondition();
         if (userCondition == User.IN_SHELTER){

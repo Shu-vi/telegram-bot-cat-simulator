@@ -1,18 +1,30 @@
 package com.generalov.command.handler;
 
 import com.generalov.CatBot;
+import com.generalov.database.Database;
 import com.generalov.database.entity.User;
-import com.generalov.properties.GetProperties;
 import lombok.SneakyThrows;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 
+
+@Component
+@Scope(value = "singleton")
 public class CommandLocations extends Command{
-    public CommandLocations(CatBot catBot){
-        super(catBot);
+    @Value("#{'${spawnLocations}'.split(',')}")
+    private String[] locations;
+    @Autowired
+    public CommandLocations(CatBot catBot, Database database) {
+        super(catBot, database);
     }
 
-    public void locations(Update update){
+
+    @Override
+    public void useCommand(Update update) {
         Long userId = update.getMessage().getChatId();
         Short userCondition = database.getUserById(userId).getCondition();
         if (userCondition == User.NOT_IN_GAME){
@@ -24,7 +36,6 @@ public class CommandLocations extends Command{
 
     @SneakyThrows
     private void locations(Long userId){
-        String[] locations = GetProperties.getSpawnLocations();
         String text = "";
         for (int i = 0; i < locations.length; i++) {
             text += getFormatLocationName(locations[i]);

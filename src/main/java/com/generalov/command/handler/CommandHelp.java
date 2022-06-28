@@ -1,23 +1,40 @@
 package com.generalov.command.handler;
 
 import com.generalov.CatBot;
+import com.generalov.database.Database;
 import com.generalov.database.entity.User;
 import lombok.SneakyThrows;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 
+@Component
+@Scope(value = "singleton")
 public class CommandHelp extends Command{
-    InlineKeyboardMarkup outGameKeyboard;
-    InlineKeyboardMarkup inGameKeyboard;
-    public CommandHelp(CatBot catBot, InlineKeyboardMarkup outGameKeyboard, InlineKeyboardMarkup inGameKeyboard){
-        super(catBot);
+    private InlineKeyboardMarkup outGameKeyboard;
+    private InlineKeyboardMarkup inGameKeyboard;
+
+    @Autowired
+    public CommandHelp(CatBot catBot,
+                       Database database,
+                       @Qualifier(value = "outGameKeyboard") InlineKeyboardMarkup outGameKeyboard,
+                       @Qualifier(value = "inGameKeyboard") InlineKeyboardMarkup inGameKeyboard) {
+        super(catBot, database);
         this.outGameKeyboard = outGameKeyboard;
         this.inGameKeyboard = inGameKeyboard;
     }
 
 
-    public void help(Update update){
+    @Override
+    public void useCommand(Update update) {
+        help(update);
+    }
+
+    private void help(Update update){
         Long userId = update.getMessage().getChatId();
         Short condition = database.getUserById(userId).getCondition();
         if (condition == User.NOT_IN_GAME){

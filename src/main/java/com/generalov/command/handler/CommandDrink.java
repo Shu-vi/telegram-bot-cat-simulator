@@ -1,19 +1,31 @@
 package com.generalov.command.handler;
 
 import com.generalov.CatBot;
+import com.generalov.database.Database;
 import com.generalov.database.entity.Cat;
 import com.generalov.database.entity.Location;
 import com.generalov.database.entity.User;
 import lombok.SneakyThrows;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 
+@Component
+@Scope(value = "prototype")
 public class CommandDrink extends Command implements Runnable{
     private Update update;
 
-    public CommandDrink(CatBot catBot, Update update) {
-        super(catBot);
+    @Autowired
+    public CommandDrink(CatBot catBot, Database database) {
+        super(catBot, database);
+    }
+
+    @Override
+    public void useCommand(Update update) {
         this.update = update;
+        new Thread(this).start();
     }
 
     @Override

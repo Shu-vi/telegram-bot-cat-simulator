@@ -9,7 +9,7 @@ public class Cat extends BaseEntity{
     private String gender;
     private Integer breedId;
     private Integer health;
-    private Integer satiety;//Сытость
+    private Integer satiety;
     private Integer water;
     private Integer stamina;
     private Integer locationId;

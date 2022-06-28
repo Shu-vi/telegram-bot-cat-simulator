@@ -1,22 +1,38 @@
 package com.generalov.command.handler;
 
 import com.generalov.CatBot;
+import com.generalov.database.Database;
 import com.generalov.database.entity.Cat;
 import com.generalov.database.entity.Location;
 import com.generalov.database.entity.User;
 import com.generalov.string.handler.StringHandler;
 import lombok.SneakyThrows;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 
+
+@Component
+@Scope(value = "prototype")
 public class CommandMoveToLocation extends Command implements Runnable{
     private Update update;
-    private CommandAboutLocation commandAboutLocation;
+    private Command commandAboutLocation;
     //todo нужен рефакторинг
-    public CommandMoveToLocation(CatBot catBot, Update update, CommandAboutLocation commandAboutLocation) {
-        super(catBot);
-        this.update = update;
+
+
+    @Autowired
+    public CommandMoveToLocation(CatBot catBot, Database database, @Qualifier(value = "commandAboutLocation") Command commandAboutLocation) {
+        super(catBot, database);
         this.commandAboutLocation = commandAboutLocation;
+    }
+
+    @Override
+    public void useCommand(Update update) {
+        this.update = update;
+        new Thread(this).start();
     }
 
     @Override
@@ -26,7 +42,7 @@ public class CommandMoveToLocation extends Command implements Runnable{
         Short userCondition = database.getUserById(userId).getCondition();
         if (userCondition == User.IN_GAME){
             moveToLocation(userId, message);
-            commandAboutLocation.aboutLocation(update);
+            commandAboutLocation.useCommand(update);
         } else if (userCondition == User.NOT_IN_GAME) {
             notInGameMessage(userId);
         } else {

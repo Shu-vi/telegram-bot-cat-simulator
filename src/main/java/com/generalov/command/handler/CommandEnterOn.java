@@ -1,18 +1,26 @@
 package com.generalov.command.handler;
 
 import com.generalov.CatBot;
+import com.generalov.database.Database;
 import com.generalov.database.entity.User;
 import com.generalov.string.handler.StringHandler;
 import lombok.SneakyThrows;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 
+@Component
+@Scope(value = "singleton")
 public class CommandEnterOn extends Command{
-    public CommandEnterOn(CatBot catBot) {
-        super(catBot);
+    @Autowired
+    public CommandEnterOn(CatBot catBot, Database database) {
+        super(catBot, database);
     }
 
-    public void enterOn(Update update){
+    @Override
+    public void useCommand(Update update) {
         Long userId = update.getMessage().getChatId();
         String message = StringHandler.deleteBotName(update.getMessage().getText());
         Short userCondition = database.getUserById(userId).getCondition();
