@@ -1,7 +1,10 @@
 package com.generalov.command.handler;
 
 import com.generalov.CatBot;
-import com.generalov.database.Database;
+import com.generalov.database.dao.breed.BreedDao;
+import com.generalov.database.dao.cat.CatDao;
+import com.generalov.database.dao.location.LocationDao;
+import com.generalov.database.dao.user.UserDao;
 import com.generalov.database.entity.Breed;
 import com.generalov.database.entity.Cat;
 import com.generalov.database.entity.User;
@@ -13,13 +16,23 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 
 import java.util.ArrayList;
+import java.util.List;
 
 @Component
 @Scope(value = "singleton")
 public class CommandMyCats extends Command{
+    private UserDao userDao;
+    private CatDao catDao;
+    private BreedDao breedDao;
+    private LocationDao locationDao;
+
     @Autowired
-    public CommandMyCats(CatBot catBot, Database database) {
-        super(catBot, database);
+    public CommandMyCats(CatBot catBot, UserDao userDao, CatDao catDao, BreedDao breedDao, LocationDao locationDao) {
+        super(catBot);
+        this.userDao = userDao;
+        this.catDao = catDao;
+        this.breedDao = breedDao;
+        this.locationDao = locationDao;
     }
 
     /**
@@ -29,7 +42,7 @@ public class CommandMyCats extends Command{
     @Override
     public void useCommand(Update update) {
         Long userId = update.getMessage().getChatId();
-        Short userCondition = database.getUserById(userId).getCondition();
+        Short userCondition = userDao.read(userId).getCondition();
         if (userCondition == User.NOT_IN_GAME){
             getCats(userId);
         } else {
@@ -42,16 +55,13 @@ public class CommandMyCats extends Command{
      */
     @SneakyThrows
     private void getCats(Long userId){
-        ArrayList<Cat> cats = database.getCatsListByUserId(userId);
+        Cat cat = catDao.readCatByUserId(userId);
         String text = "";
-        if (!isCatExist(cats)){
+        if (!isCatExist(cat)){
             text += catsNoText();
         } else {
-            for (int i = 0; i < cats.size(); i++) {
-                String breedTitle = database.getBreedByBreedId(cats.get(i).getBreedId());
-                Breed breed = database.getBreed(breedTitle);
-                text += getCatInfo(i+1, cats.get(i), breed);
-            }
+                Breed breed = breedDao.read(cat.getBreedId());
+                text += getCatInfo(cat, breed);
         }
         catBot.execute(SendMessage.builder().text(text).chatId(userId.toString()).build());
     }
@@ -64,10 +74,10 @@ public class CommandMyCats extends Command{
     /**
      * Возвращает форматированную строку с информацией о коте пользователя.
      */
-    private String getCatInfo(Integer catNumber, Cat cat, Breed breed){
-        return catNumber + ") " + cat.getGender() + " " + cat.getName() + " породы " +
+    private String getCatInfo(Cat cat, Breed breed){
+        return cat.getGender() + " " + cat.getName() + " породы " +
                 breed.getTitle() + //Скорее всего надо изменить
-                " на локации " + database.getLocationByLocationId(cat.getLocationId()).getTitle() + "." +
+                " на локации " + locationDao.read(cat.getLocationId()).getTitle() + "." +
                 "\n   Параметры:" +
                 "\n      Здоровье: " + cat.getHealth() + " / " + (breed.getMaxHealth() == null? "Бесконечность" : breed.getMaxHealth()) +
                 "\n      Жажда: " + cat.getWater() + " / " + (breed.getMaxWater() == null? "Бесконечность" : breed.getMaxWater()) +
@@ -87,8 +97,8 @@ public class CommandMyCats extends Command{
     /**
      * Возвращает True, если у пользователя есть коты.
      */
-    private Boolean isCatExist(ArrayList<Cat> cats){
-        return cats.size() > 0;
+    private Boolean isCatExist(Cat cat){
+        return cat != null;
     }
 
     /**

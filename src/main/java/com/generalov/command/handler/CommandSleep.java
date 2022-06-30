@@ -1,7 +1,8 @@
 package com.generalov.command.handler;
 
 import com.generalov.CatBot;
-import com.generalov.database.Database;
+import com.generalov.database.dao.cat.CatDao;
+import com.generalov.database.dao.user.UserDao;
 import com.generalov.database.entity.Cat;
 import com.generalov.database.entity.User;
 import lombok.SneakyThrows;
@@ -15,10 +16,14 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 @Scope(value = "prototype")
 public class CommandSleep extends Command implements Runnable{
     private Update update;
+    private UserDao userDao;
+    private CatDao catDao;
 
     @Autowired
-    public CommandSleep(CatBot catBot, Database database) {
-        super(catBot, database);
+    public CommandSleep(CatBot catBot, UserDao userDao, CatDao catDao) {
+        super(catBot);
+        this.userDao = userDao;
+        this.catDao = catDao;
     }
 
     @Override
@@ -35,7 +40,7 @@ public class CommandSleep extends Command implements Runnable{
      */
     @Override
     public void run() {
-        Short userCondition = database.getUserById(update.getMessage().getChatId()).getCondition();
+        Short userCondition = userDao.read(update.getMessage().getChatId()).getCondition();
         if (userCondition == User.IN_SHELTER) {
             sleep();
         } else if (userCondition == User.IN_GAME) {
@@ -53,7 +58,7 @@ public class CommandSleep extends Command implements Runnable{
      */
     private void sleep(){
         Long userId = update.getMessage().getChatId();
-        Cat cat = database.getCatByUserIdAndCatStatus(userId, true);
+        Cat cat = catDao.readCatByUserId(userId);
         Long waitingTimeMillis = calculateWaitingTimeMillis(cat.getStamina());
         if (isCanSleep(waitingTimeMillis)){
             sleeping(cat, waitingTimeMillis, userId);
@@ -70,12 +75,15 @@ public class CommandSleep extends Command implements Runnable{
      */
     @SneakyThrows
     private void sleeping(Cat cat, Long waitingTimeMillis, Long userId){
-        database.setUserConditionByUserId(User.SLEEPING, userId);
+        User user = userDao.read(userId);
+        user.setCondition(User.SLEEPING);
+        userDao.update(user);
         cat.setStamina(100);
-        database.setCat(cat);
+        catDao.update(cat);
         catSleepingMessage(waitingTimeMillis);
         Thread.sleep(waitingTimeMillis);
-        database.setUserConditionByUserId(User.IN_SHELTER, userId);
+        user.setCondition(User.IN_SHELTER);
+        userDao.update(user);
         catWakeupMessage();
     }
 

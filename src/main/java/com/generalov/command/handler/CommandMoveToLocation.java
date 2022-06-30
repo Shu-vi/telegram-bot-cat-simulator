@@ -1,7 +1,9 @@
 package com.generalov.command.handler;
 
 import com.generalov.CatBot;
-import com.generalov.database.Database;
+import com.generalov.database.dao.cat.CatDao;
+import com.generalov.database.dao.location.LocationDao;
+import com.generalov.database.dao.user.UserDao;
 import com.generalov.database.entity.Cat;
 import com.generalov.database.entity.Location;
 import com.generalov.database.entity.User;
@@ -21,12 +23,21 @@ public class CommandMoveToLocation extends Command implements Runnable{
     private Update update;
     private Command commandAboutLocation;
     //todo нужен рефакторинг
-
+    private UserDao userDao;
+    private CatDao catDao;
+    private LocationDao locationDao;
 
     @Autowired
-    public CommandMoveToLocation(CatBot catBot, Database database, @Qualifier(value = "commandAboutLocation") Command commandAboutLocation) {
-        super(catBot, database);
+    public CommandMoveToLocation(CatBot catBot,
+                                 @Qualifier(value = "commandAboutLocation") Command commandAboutLocation,
+                                 UserDao userDao,
+                                 CatDao catDao,
+                                 LocationDao locationDao) {
+        super(catBot);
         this.commandAboutLocation = commandAboutLocation;
+        this.catDao = catDao;
+        this.userDao = userDao;
+        this.locationDao = locationDao;
     }
 
     @Override
@@ -39,7 +50,7 @@ public class CommandMoveToLocation extends Command implements Runnable{
     public void run() {
         Long userId = update.getMessage().getChatId();
         String message = StringHandler.deleteBotName(update.getMessage().getText());
-        Short userCondition = database.getUserById(userId).getCondition();
+        Short userCondition = userDao.read(userId).getCondition();
         if (userCondition == User.IN_GAME){
             moveToLocation(userId, message);
             commandAboutLocation.useCommand(update);
@@ -52,17 +63,14 @@ public class CommandMoveToLocation extends Command implements Runnable{
 
     private void moveToLocation(Long userId, String message){
         String locationTitle = StringHandler.toUpperCaseFirstChar(getLocationTitle(message));
-        Cat cat = database.getCatByUserIdAndCatStatus(userId, true);
-        Location currentLocation = database.getLocationByLocationId(cat.getLocationId());
+        Cat cat = catDao.readCatByUserId(userId);
+        Location currentLocation = locationDao.read(cat.getLocationId());
         Integer[] neighboringLocationId = currentLocation.getNeighboringLocationsId();
-        Location wishesLocation = database.getLocationByLocationTitle(locationTitle);
+        Location wishesLocation = locationDao.readLocationByLocationTitle(locationTitle);
         if (isExistLocation(wishesLocation)){
             if (isContains(wishesLocation, neighboringLocationId)){
                 if (!isLowStats(cat))
                     move(userId, cat, wishesLocation);
-                else
-                    //Нельзя перейти иначе смерть
-                    return;
             }else {
                 notNeighboringLocationMessage(userId);
             }
@@ -73,11 +81,14 @@ public class CommandMoveToLocation extends Command implements Runnable{
 
     @SneakyThrows
     private void move(Long userId, Cat cat, Location wishesLocation){
-        database.setUserConditionByUserId(User.MOVING, userId);
+        User user = userDao.read(userId);
+        user.setCondition(User.MOVING);
+        userDao.update(user);
         movingMessage(userId);
         Thread.sleep(30000);
         editCatParametersDuringMoving(cat, wishesLocation);
-        database.setUserConditionByUserId(User.IN_GAME, userId);
+        user.setCondition(User.IN_GAME);
+        userDao.update(user);
         congratulationMessage(userId, wishesLocation.getTitle());
     }
 
@@ -87,7 +98,7 @@ public class CommandMoveToLocation extends Command implements Runnable{
         cat.setHealth(cat.getHealth() - 1);
         cat.setSatiety(cat.getSatiety() - 10);
         cat.setWater(cat.getWater() - 7);
-        database.setCat(cat);
+        catDao.update(cat);
     }
 
     /**

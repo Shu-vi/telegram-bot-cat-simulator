@@ -1,7 +1,7 @@
 package com.generalov.command.handler;
 
 import com.generalov.CatBot;
-import com.generalov.database.Database;
+import com.generalov.database.dao.user.UserDao;
 import com.generalov.database.entity.User;
 import lombok.SneakyThrows;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,16 +17,18 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 public class CommandLocations extends Command{
     @Value("#{'${spawnLocations}'.split(',')}")
     private String[] locations;
-    @Autowired
-    public CommandLocations(CatBot catBot, Database database) {
-        super(catBot, database);
-    }
+    private UserDao userDao;
 
+    @Autowired
+    public CommandLocations(CatBot catBot, UserDao userDao) {
+        super(catBot);
+        this.userDao = userDao;
+    }
 
     @Override
     public void useCommand(Update update) {
         Long userId = update.getMessage().getChatId();
-        Short userCondition = database.getUserById(userId).getCondition();
+        Short userCondition = userDao.read(userId).getCondition();
         if (userCondition == User.NOT_IN_GAME){
             locations(userId);
         } else {

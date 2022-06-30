@@ -1,7 +1,9 @@
 package com.generalov.command.handler;
 
 import com.generalov.CatBot;
-import com.generalov.database.Database;
+import com.generalov.database.dao.cat.CatDao;
+import com.generalov.database.dao.shelter.ShelterDao;
+import com.generalov.database.dao.user.UserDao;
 import com.generalov.database.entity.Cat;
 import com.generalov.database.entity.Shelter;
 import com.generalov.database.entity.User;
@@ -16,16 +18,23 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 @Component
 @Scope(value = "singleton")
 public class CommandEnterToShelter extends Command{
+    private UserDao userDao;
+    private ShelterDao shelterDao;
+    private CatDao catDao;
+
     @Autowired
-    public CommandEnterToShelter(CatBot catBot, Database database) {
-        super(catBot, database);
+    public CommandEnterToShelter(CatBot catBot, UserDao userDao, ShelterDao shelterDao, CatDao catDao) {
+        super(catBot);
+        this.userDao = userDao;
+        this.shelterDao = shelterDao;
+        this.catDao = catDao;
     }
 
     @Override
     public void useCommand(Update update) {
         Long userId = update.getMessage().getChatId();
         String message = StringHandler.deleteBotName(update.getMessage().getText());
-        Short userCondition = database.getUserById(userId).getCondition();
+        Short userCondition = userDao.read(userId).getCondition();
         if (userCondition == User.IN_GAME){
             enterToShelter(userId, message);
             congratulationsMessage(userId);
@@ -36,8 +45,8 @@ public class CommandEnterToShelter extends Command{
 
     private void enterToShelter(Long userId, String message){
         String shelterName = getShelterName(message);
-        Shelter shelter = database.getShelterByShelterTitle(shelterName);
-        Cat cat = database.getCatByUserIdAndCatStatus(userId, true);
+        Shelter shelter = shelterDao.readShelterByShelterTitle(shelterName);
+        Cat cat = catDao.readCatByUserId(userId);
         addCatToShelter(shelter, cat);
     }
 
@@ -45,8 +54,10 @@ public class CommandEnterToShelter extends Command{
         Integer[] oldCatsId = shelter.getCats();
         Integer[] newCatsId = getNewCatsId(oldCatsId, newCat);
         shelter.setCats(newCatsId);
-        database.setShelterByShelterId(shelter);
-        database.setUserConditionByUserId(User.IN_SHELTER, newCat.getUserId());
+        shelterDao.update(shelter);
+        User user = userDao.read(newCat.getUserId());
+        user.setCondition(User.IN_SHELTER);
+        userDao.update(user);
     }
 
     private Integer[] getNewCatsId(Integer[] oldCatsId, Cat newCat){

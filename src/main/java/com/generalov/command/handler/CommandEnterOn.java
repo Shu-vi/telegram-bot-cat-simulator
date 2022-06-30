@@ -1,7 +1,9 @@
 package com.generalov.command.handler;
 
 import com.generalov.CatBot;
-import com.generalov.database.Database;
+import com.generalov.database.dao.cat.CatDao;
+import com.generalov.database.dao.user.UserDao;
+import com.generalov.database.entity.Cat;
 import com.generalov.database.entity.User;
 import com.generalov.string.handler.StringHandler;
 import lombok.SneakyThrows;
@@ -14,31 +16,40 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 @Component
 @Scope(value = "singleton")
 public class CommandEnterOn extends Command{
+    private UserDao userDao;
+    private CatDao catDao;
+
     @Autowired
-    public CommandEnterOn(CatBot catBot, Database database) {
-        super(catBot, database);
+    public CommandEnterOn(CatBot catBot, UserDao userDao, CatDao catDao) {
+        super(catBot);
+        this.userDao = userDao;
+        this.catDao = catDao;
     }
 
     @Override
     public void useCommand(Update update) {
         Long userId = update.getMessage().getChatId();
+        User user = userDao.read(userId);
         String message = StringHandler.deleteBotName(update.getMessage().getText());
-        Short userCondition = database.getUserById(userId).getCondition();
+        Short userCondition = user.getCondition();
         if (userCondition == User.NOT_IN_GAME) {
-            enterOn(message, userId);
+            enterOn(message, user);
         } else {
             alreadyInGameMessage(userId);
         }
     }
 
-    private void enterOn(String message, Long userId){
+    private void enterOn(String message, User user){
         String catName = getCatName(message);
-        Integer catId = database.getCatByCatNameAndUserId(catName, userId).getId();
-        if (isCatExist(catId)){
-            changeConditions(userId, catId);
-            congratulationMessage(userId);
+        Cat cat = catDao.readCatByCatName(catName);
+        if (isCatExist(cat)){
+            System.out.println(cat.getUserId() + " " + user.getId());
+            if (cat.getUserId().equals(user.getId())){
+                changeConditions(user, cat);
+                congratulationMessage(user.getId());
+            }
         } else {
-            catNotExistMessage(userId);
+            catNotExistMessage(user.getId());
         }
     }
 
@@ -46,13 +57,15 @@ public class CommandEnterOn extends Command{
         return message.substring(9);
     }
 
-    private Boolean isCatExist(Integer catId){
-        return catId!=null;
+    private Boolean isCatExist(Cat cat){
+        return cat!=null;
     }
 
-    private void changeConditions(Long userId, Integer catId){
-        database.setUserConditionByUserId(User.IN_GAME, userId);
-        database.setCatOnlineStatus(true, catId);
+    private void changeConditions(User user, Cat cat){
+        user.setCondition(User.IN_GAME);
+        cat.setIsOnline(true);
+        userDao.update(user);
+        catDao.update(cat);
     }
 
     @SneakyThrows

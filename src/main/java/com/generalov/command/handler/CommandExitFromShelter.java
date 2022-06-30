@@ -1,7 +1,9 @@
 package com.generalov.command.handler;
 
 import com.generalov.CatBot;
-import com.generalov.database.Database;
+import com.generalov.database.dao.cat.CatDao;
+import com.generalov.database.dao.shelter.ShelterDao;
+import com.generalov.database.dao.user.UserDao;
 import com.generalov.database.entity.Cat;
 import com.generalov.database.entity.Shelter;
 import com.generalov.database.entity.User;
@@ -13,19 +15,27 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 
 import java.util.ArrayList;
+import java.util.List;
 
 @Component
 @Scope(value = "singleton")
 public class CommandExitFromShelter extends Command{
+    private UserDao userDao;
+    private CatDao catDao;
+    private ShelterDao shelterDao;
+
     @Autowired
-    public CommandExitFromShelter(CatBot catBot, Database database) {
-        super(catBot, database);
+    public CommandExitFromShelter(CatBot catBot, UserDao userDao, CatDao catDao, ShelterDao shelterDao) {
+        super(catBot);
+        this.userDao = userDao;
+        this.catDao = catDao;
+        this.shelterDao = shelterDao;
     }
 
     @Override
     public void useCommand(Update update) {
         Long userId = update.getMessage().getChatId();
-        Short userCondition = database.getUserById(userId).getCondition();
+        Short userCondition = userDao.read(userId).getCondition();
         if (userCondition == User.IN_SHELTER){
             exitFromShelter(userId);
             congratulationMessage(userId);
@@ -33,15 +43,16 @@ public class CommandExitFromShelter extends Command{
     }
 
     private void exitFromShelter(Long userId){
-        User user = database.getUserById(userId);
-        Cat cat = database.getCatByUserIdAndCatStatus(userId, true);
-        ArrayList<Shelter> shelters = database.getSheltersByLocationId(cat.getLocationId());
+        User user = userDao.read(userId);
+        Cat cat = catDao.readCatByUserId(userId);
+        List<Shelter> shelters = shelterDao.readSheltersByLocationId(cat.getLocationId());
         Shelter shelter = getShelter(cat, shelters);
         catShelterOut(cat, shelter);
-        database.setUserConditionByUserId(User.IN_GAME, user.getId());
+        user.setCondition(User.IN_GAME);
+        userDao.update(user);
     }
 
-    private Shelter getShelter(Cat cat, ArrayList<Shelter> shelters){
+    private Shelter getShelter(Cat cat, List<Shelter> shelters){
         Integer catId = cat.getId();
         for (int i = 0; i < shelters.size(); i++) {
             Integer catsSize = shelters.get(i).getCats().length;
@@ -67,7 +78,7 @@ public class CommandExitFromShelter extends Command{
             }
         }
         shelter.setCats(newCatsId);
-        database.setShelterByShelterId(shelter);
+        shelterDao.update(shelter);
     }
 
     private Boolean isCatsEquals(Integer catIdFirst, Integer catIdSecond){

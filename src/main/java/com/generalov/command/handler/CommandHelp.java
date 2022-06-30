@@ -1,7 +1,7 @@
 package com.generalov.command.handler;
 
 import com.generalov.CatBot;
-import com.generalov.database.Database;
+import com.generalov.database.dao.user.UserDao;
 import com.generalov.database.entity.User;
 import lombok.SneakyThrows;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,15 +17,17 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMa
 public class CommandHelp extends Command{
     private InlineKeyboardMarkup outGameKeyboard;
     private InlineKeyboardMarkup inGameKeyboard;
+    private UserDao userDao;
 
     @Autowired
     public CommandHelp(CatBot catBot,
-                       Database database,
                        @Qualifier(value = "outGameKeyboard") InlineKeyboardMarkup outGameKeyboard,
-                       @Qualifier(value = "inGameKeyboard") InlineKeyboardMarkup inGameKeyboard) {
-        super(catBot, database);
+                       @Qualifier(value = "inGameKeyboard") InlineKeyboardMarkup inGameKeyboard,
+                       UserDao userDao) {
+        super(catBot);
         this.outGameKeyboard = outGameKeyboard;
         this.inGameKeyboard = inGameKeyboard;
+        this.userDao = userDao;
     }
 
 
@@ -36,7 +38,7 @@ public class CommandHelp extends Command{
 
     private void help(Update update){
         Long userId = update.getMessage().getChatId();
-        Short condition = database.getUserById(userId).getCondition();
+        Short condition = userDao.read(userId).getCondition();
         if (condition == User.NOT_IN_GAME){
             helpOutGame(userId);
         } else{

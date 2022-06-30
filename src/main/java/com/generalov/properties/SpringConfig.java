@@ -1,10 +1,14 @@
 package com.generalov.properties;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.*;
 
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 
+import javax.sql.DataSource;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -12,7 +16,12 @@ import java.util.List;
 @ComponentScan("com.generalov")
 @PropertySource("classpath:app.properties")
 public class SpringConfig {
-
+    @Value("${databaseUsername}")
+    private String db_username;
+    @Value("${databaseUrl}")
+    private String db_url;
+    @Value("${databasePassword}")
+    private String db_password;
 
     /**
      * @return бин клавиатуры для состояний во время игры.
@@ -87,5 +96,22 @@ public class SpringConfig {
          */
         outGameKeyboard.setKeyboard(rowArrayList);
         return outGameKeyboard;
+    }
+
+    @Bean
+    @Scope(value = "singleton")
+    public DataSource dataSource(){
+        DriverManagerDataSource dataSource = new DriverManagerDataSource();
+        dataSource.setDriverClassName("org.postgresql.Driver");
+        dataSource.setUrl(db_url);
+        dataSource.setUsername(db_username);
+        dataSource.setPassword(db_password);
+        return dataSource;
+    }
+
+    @Bean
+    @Scope(value = "singleton")
+    public JdbcTemplate jdbcTemplate(){
+        return new JdbcTemplate(dataSource());
     }
 }

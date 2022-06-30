@@ -1,7 +1,11 @@
 package com.generalov.command.handler;
 
 import com.generalov.CatBot;
-import com.generalov.database.Database;
+import com.generalov.database.dao.breed.BreedDao;
+import com.generalov.database.dao.cat.CatDao;
+import com.generalov.database.dao.location.LocationDao;
+import com.generalov.database.dao.user.UserDao;
+import com.generalov.database.entity.Breed;
 import com.generalov.database.entity.Cat;
 import com.generalov.database.entity.Location;
 import com.generalov.database.entity.User;
@@ -16,10 +20,18 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 @Scope(value = "prototype")
 public class CommandDrink extends Command implements Runnable{
     private Update update;
+    private UserDao userDao;
+    private CatDao catDao;
+    private LocationDao locationDao;
+    private BreedDao breedDao;
 
     @Autowired
-    public CommandDrink(CatBot catBot, Database database) {
-        super(catBot, database);
+    public CommandDrink(CatBot catBot, UserDao userDao, CatDao catDao, LocationDao locationDao, BreedDao breedDao) {
+        super(catBot);
+        this.userDao = userDao;
+        this.catDao = catDao;
+        this.locationDao = locationDao;
+        this.breedDao = breedDao;
     }
 
     @Override
@@ -30,8 +42,7 @@ public class CommandDrink extends Command implements Runnable{
 
     @Override
     public void run() {
-        User user = database.getUserById(update.getMessage().getChatId());
-        Short userCondition = user.getCondition();
+        Short userCondition = userDao.read(update.getMessage().getChatId()).getCondition();
         if (userCondition == User.IN_GAME) {
             drink();
         } else if (userCondition == User.NOT_IN_GAME) {
@@ -43,11 +54,12 @@ public class CommandDrink extends Command implements Runnable{
 
     private void drink(){
         Long userId = update.getMessage().getChatId();
-        Cat cat = database.getCatByUserIdAndCatStatus(userId, true);
-        Location location = database.getLocationByLocationId(cat.getLocationId());
+        Cat cat = catDao.readCatByUserId(userId);
+        cat.setBreed(breedDao.read(cat.getBreedId()));
+        Location location = locationDao.read(cat.getLocationId());
         Long waitingTimeMillis = Long.valueOf(calculateMillisOfDrinking(cat));
         if (isExistWater(location)){
-            doDrinking(waitingTimeMillis, userId, cat);
+            doDrinking(waitingTimeMillis, cat);
             congratulationMessage();
         } else {
             waterIsNotExistMessage();
@@ -55,13 +67,16 @@ public class CommandDrink extends Command implements Runnable{
     }
 
     @SneakyThrows
-    private void doDrinking(Long waitingTimeMillis, Long userId, Cat cat){
+    private void doDrinking(Long waitingTimeMillis, Cat cat){
         drinkingMessage(waitingTimeMillis);
-        database.setUserConditionByUserId(User.DRINKING, userId);
+        User user = userDao.read(update.getMessage().getChatId());
+        user.setCondition(User.DRINKING);
+        userDao.update(user);
         Thread.sleep(waitingTimeMillis);
-        cat.setWater(100);
-        database.setCat(cat);
-        database.setUserConditionByUserId(User.IN_GAME, userId);
+        cat.setWater(cat.getBreed().getMaxWater());
+        catDao.update(cat);
+        user.setCondition(User.IN_GAME);
+        userDao.update(user);
     }
 
     private Boolean isExistWater(Location location){
@@ -105,6 +120,6 @@ public class CommandDrink extends Command implements Runnable{
     }
 
     private Integer calculateMillisOfDrinking(Cat cat){
-        return (100 - cat.getWater()) * 6 * 1000;
+        return (cat.getBreed().getMaxWater() - cat.getWater()) * 6 * 1000;
     }
 }

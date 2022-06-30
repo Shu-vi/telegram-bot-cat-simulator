@@ -1,7 +1,10 @@
 package com.generalov.command.handler;
 
 import com.generalov.CatBot;
-import com.generalov.database.Database;
+import com.generalov.database.dao.breed.BreedDao;
+import com.generalov.database.dao.cat.CatDao;
+import com.generalov.database.dao.location.LocationDao;
+import com.generalov.database.dao.user.UserDao;
 import com.generalov.database.entity.Cat;
 import com.generalov.database.entity.Location;
 import com.generalov.database.entity.User;
@@ -16,10 +19,18 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 @Scope(value = "prototype")
 public class CommandEat extends Command implements Runnable{
     private Update update;
+    private UserDao userDao;
+    private CatDao catDao;
+    private LocationDao locationDao;
+    private BreedDao breedDao;
 
     @Autowired
-    public CommandEat(CatBot catBot, Database database) {
-        super(catBot, database);
+    public CommandEat(CatBot catBot, UserDao userDao, CatDao catDao, LocationDao locationDao, BreedDao breedDao) {
+        super(catBot);
+        this.userDao = userDao;
+        this.catDao = catDao;
+        this.locationDao = locationDao;
+        this.breedDao = breedDao;
     }
 
     @Override
@@ -30,8 +41,7 @@ public class CommandEat extends Command implements Runnable{
 
     @Override
     public void run() {
-        User user = database.getUserById(update.getMessage().getChatId());
-        Short userCondition = user.getCondition();
+        Short userCondition = userDao.read(update.getMessage().getChatId()).getCondition();
         if (userCondition == User.IN_GAME) {
             eat();
         } else if (userCondition == User.NOT_IN_GAME) {
@@ -43,8 +53,9 @@ public class CommandEat extends Command implements Runnable{
 
     private void eat(){
         Long userId = update.getMessage().getChatId();
-        Cat cat = database.getCatByUserIdAndCatStatus(userId, true);
-        Location location = database.getLocationByLocationId(cat.getLocationId());
+        Cat cat = catDao.readCatByUserId(userId);
+        cat.setBreed(breedDao.read(cat.getBreedId()));
+        Location location = locationDao.read(cat.getLocationId());
         Long waitingTimeMillis = Long.valueOf(calculateMillisOfEating());
         if (isExistFood(location)){
             doEat(waitingTimeMillis, userId, cat);
@@ -57,11 +68,14 @@ public class CommandEat extends Command implements Runnable{
     @SneakyThrows
     private void doEat(Long waitingTimeMillis, Long userId, Cat cat){
         eatingMessage(waitingTimeMillis);
-        database.setUserConditionByUserId(User.EATING, userId);
+        User user = userDao.read(userId);
+        user.setCondition(User.EATING);
+        userDao.update(user);
         Thread.sleep(waitingTimeMillis);
-        cat.setSatiety(Math.min(cat.getSatiety() + 10, 100));
-        database.setCat(cat);
-        database.setUserConditionByUserId(User.IN_GAME, userId);
+        cat.setSatiety(Math.min(cat.getSatiety() + 10, cat.getBreed().getMaxSatiety()));
+        catDao.update(cat);
+        user.setCondition(User.IN_GAME);
+        userDao.update(user);
     }
 
     private Boolean isExistFood(Location location){

@@ -15,6 +15,7 @@ public class Cat extends BaseEntity{
     private Integer locationId;
     private Long userId;
     private Boolean isOnline;
+    private Breed breed;
 
     public Cat(Integer id, String name, String gender, Integer breedId, Integer health, Integer satiety, Integer water, Integer stamina, Integer locationId, Long userId, Boolean isOnline) {
         super(id);

@@ -1,7 +1,9 @@
 package com.generalov.command.handler;
 
 import com.generalov.CatBot;
-import com.generalov.database.Database;
+import com.generalov.database.dao.cat.CatDao;
+import com.generalov.database.dao.location.LocationDao;
+import com.generalov.database.dao.user.UserDao;
 import com.generalov.database.entity.Cat;
 import com.generalov.database.entity.Location;
 import com.generalov.database.entity.User;
@@ -17,10 +19,16 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 @Scope(value = "prototype")
 public class CommandHealing extends Command implements Runnable{
     private Update update;
+    private UserDao userDao;
+    private CatDao catDao;
+    private LocationDao locationDao;
 
     @Autowired
-    public CommandHealing(CatBot catBot, Database database) {
-        super(catBot, database);
+    public CommandHealing(CatBot catBot, UserDao userDao, CatDao catDao, LocationDao locationDao) {
+        super(catBot);
+        this.userDao = userDao;
+        this.catDao = catDao;
+        this.locationDao = locationDao;
     }
 
     @Override
@@ -31,7 +39,7 @@ public class CommandHealing extends Command implements Runnable{
 
     @Override
     public void run() {
-        User user = database.getUserById(update.getMessage().getChatId());
+        User user = userDao.read(update.getMessage().getChatId());
         Short userCondition = user.getCondition();
         if (userCondition == User.IN_GAME) {
             healing();
@@ -45,8 +53,8 @@ public class CommandHealing extends Command implements Runnable{
     @SneakyThrows
     private void healing(){
         Long userId = update.getMessage().getChatId();
-        Cat cat = database.getCatByUserIdAndCatStatus(userId, true);
-        Location location = database.getLocationByLocationId(cat.getLocationId());
+        Cat cat = catDao.readCatByUserId(userId);
+        Location location = locationDao.read(cat.getLocationId());
         Long waitingTimeMillis = Long.valueOf(calculateMillisOfHealing());
         if (isCanHealing(location)){
             doHealing(waitingTimeMillis, cat);
@@ -59,11 +67,14 @@ public class CommandHealing extends Command implements Runnable{
     private void doHealing(Long waitingTimeMillis, Cat cat){
         Long userId = update.getMessage().getChatId();
         healingMessage(waitingTimeMillis);
-        database.setUserConditionByUserId(User.HEALING, userId);
+        User user = userDao.read(userId);
+        user.setCondition(User.HEALING);
+        userDao.update(user);
         Thread.sleep(waitingTimeMillis);
         cat.setHealth(Math.min(cat.getHealth() + 7, 100));
-        database.setCat(cat);
-        database.setUserConditionByUserId(User.IN_GAME, userId);
+        catDao.update(cat);
+        user.setCondition(User.IN_GAME);
+        userDao.update(user);
         congratulationMessage();
     }
 

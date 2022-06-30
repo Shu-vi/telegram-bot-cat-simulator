@@ -1,7 +1,7 @@
 package com.generalov.command.handler;
 
 import com.generalov.CatBot;
-import com.generalov.database.Database;
+import com.generalov.database.dao.user.UserDao;
 import com.generalov.database.entity.User;
 import lombok.SneakyThrows;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,9 +13,12 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 @Component
 @Scope(value = "singleton")
 public class CommandStart extends Command{
+    private UserDao userDao;
+
     @Autowired
-    public CommandStart(CatBot catBot, Database database) {
-        super(catBot, database);
+    public CommandStart(CatBot catBot, UserDao userDao) {
+        super(catBot);
+        this.userDao = userDao;
     }
 
     /**
@@ -28,7 +31,7 @@ public class CommandStart extends Command{
         String userName = update.getMessage().getFrom().getFirstName();
         if (!isUserExist(userId)){
             User user = new User(userId, userName, (short) 0);
-            database.addUser(user);
+            userDao.create(user);
             sendGreeting(userName, userId);
         }
     }
@@ -38,7 +41,7 @@ public class CommandStart extends Command{
      * @return возвращает true, если пользователь уже есть в базе данных.
      */
     private Boolean isUserExist(Long id) {
-        return database.getUserById(id) != null;
+        return userDao.read(id) != null;
     }
 
     /**

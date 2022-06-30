@@ -1,7 +1,11 @@
 package com.generalov.command.handler;
 
 import com.generalov.CatBot;
-import com.generalov.database.Database;
+import com.generalov.database.dao.breed.BreedDao;
+import com.generalov.database.dao.cat.CatDao;
+import com.generalov.database.dao.location.LocationDao;
+import com.generalov.database.dao.user.UserDao;
+import com.generalov.database.entity.Breed;
 import com.generalov.database.entity.Cat;
 import com.generalov.database.entity.Location;
 import com.generalov.database.entity.User;
@@ -16,10 +20,20 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 @Component
 @Scope(value = "singleton")
 public class CommandCreateCat extends Command{
+    private BreedDao breedDao;
+    private LocationDao locationDao;
+    private CatDao catDao;
+    private UserDao userDao;
+
     @Autowired
-    public CommandCreateCat(CatBot catBot, Database database) {
-        super(catBot, database);
+    public CommandCreateCat(CatBot catBot, BreedDao breedDao, LocationDao locationDao, CatDao catDao, UserDao userDao) {
+        super(catBot);
+        this.breedDao = breedDao;
+        this.locationDao = locationDao;
+        this.catDao = catDao;
+        this.userDao = userDao;
     }
+
 
     /**
      * Передаёт создание кота в другой метод, но делает это если пользователь сейчас не в игре и у пользователя меньше 3 котов.
@@ -43,21 +57,19 @@ public class CommandCreateCat extends Command{
      * Нужно проверить на корректность имя кота, у одного пользователя не должно быть повторений по имени.
      * Порода и пол приходят уже корректными.
      */
-    private void addCat(String message, Long chatId){
+    private void addCat(String message, Long userId){
         String catName = getCatName(message);
-        String catBreed = StringHandler.toUpperCaseFirstChar(getCatBreed(message));
-        Integer breedId = database.getBreedIdByBreed(catBreed);
-        String locationTitle = StringHandler.toUpperCaseFirstChar(getLocationTitle(message));
-        Location location = database.getLocationByLocationTitle(locationTitle);
+        Breed breed = breedDao.readBreedByBreedTitle(StringHandler.toUpperCaseFirstChar(getCatBreed(message)));
+        Location location = locationDao.readLocationByLocationTitle(StringHandler.toUpperCaseFirstChar(getLocationTitle(message)));
         String catGender = StringHandler.toUpperCaseFirstChar(getCatGender(message));
         if (isWrongLocation(location.getId())){
-            notExistLocationMessage(chatId);
-        } else if (isExistCatName(catName, chatId)){
-            nameIsNotFreeMessage(chatId);
+            notExistLocationMessage(userId);
+        } else if (isExistCatName(catName)){
+            nameIsNotFreeMessage(userId);
         } else{
-            Cat cat = new Cat(0, catName, catGender, breedId, 100, 100, 100, 100, location.getId(), chatId, false);
-            database.addCat(cat);
-            congratulationsMessage(chatId);
+            Cat cat = new Cat(0, catName, catGender, breed.getId(), breed.getMaxHealth(), breed.getMaxSatiety(), breed.getMaxWater(), breed.getMaxStamina(), location.getId(), userId, false);
+            catDao.create(cat);
+            congratulationsMessage(userId);
         }
     }
 
@@ -65,7 +77,7 @@ public class CommandCreateCat extends Command{
      * @return true, если у пользователя < 1 кота И состояние NOT_IN_GAME
      */
     private Boolean isCanCreateCat(Long userId){
-        return database.getUserById(userId).getCondition() == User.NOT_IN_GAME && database.getCatsCountByUserId(userId)<1;
+        return userDao.read(userId).getCondition() == User.NOT_IN_GAME && catDao.readCatByUserId(userId)==null;
     }
 
     /**
@@ -159,8 +171,8 @@ public class CommandCreateCat extends Command{
         return locationId == null;
     }
 
-    private Boolean isExistCatName(String name, Long userId){
-        return database.getCatByCatNameAndUserId(name, userId) != null;
+    private Boolean isExistCatName(String name){
+        return catDao.readCatByCatName(name) != null;
     }
 
     /**

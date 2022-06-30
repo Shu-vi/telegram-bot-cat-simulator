@@ -1,7 +1,8 @@
 package com.generalov.command.handler;
 
 import com.generalov.CatBot;
-import com.generalov.database.Database;
+import com.generalov.database.dao.cat.CatDao;
+import com.generalov.database.dao.user.UserDao;
 import com.generalov.database.entity.Cat;
 import com.generalov.database.entity.User;
 import lombok.SneakyThrows;
@@ -14,15 +15,20 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 @Component
 @Scope(value = "singleton")
 public class CommandExitFromGame extends Command{
+    private CatDao catDao;
+    private UserDao userDao;
+
     @Autowired
-    public CommandExitFromGame(CatBot catBot, Database database) {
-        super(catBot, database);
+    public CommandExitFromGame(CatBot catBot, CatDao catDao, UserDao userDao) {
+        super(catBot);
+        this.catDao = catDao;
+        this.userDao = userDao;
     }
 
     @Override
     public void useCommand(Update update) {
         Long userId = update.getMessage().getChatId();
-        Short userCondition = database.getUserById(userId).getCondition();
+        Short userCondition = userDao.read(userId).getCondition();
         if (userCondition == User.IN_GAME){
             exitFromGame(userId);
             congratulationsMessage(userId);
@@ -32,10 +38,12 @@ public class CommandExitFromGame extends Command{
     }
 
     private void exitFromGame(Long userId){
-        Cat cat = database.getCatByUserIdAndCatStatus(userId, true);
+        Cat cat = catDao.readCatByUserId(userId);
         cat.setIsOnline(false);
-        database.setCat(cat);
-        database.setUserConditionByUserId(User.NOT_IN_GAME, userId);
+        catDao.update(cat);
+        User user = userDao.read(userId);
+        user.setCondition(User.NOT_IN_GAME);
+        userDao.update(user);
     }
 
     @SneakyThrows

@@ -134,7 +134,6 @@ public class CatBot extends TelegramLongPollingBot {
                 } else if (message.matches("^Зайти в укрытие ([А-я ]+)$")) {
                     context.getBean("commandEnterToShelter", Command.class).useCommand(update);
                 }
-                return;
         }
     }
 
@@ -144,7 +143,7 @@ public class CatBot extends TelegramLongPollingBot {
      */
     @SneakyThrows
     private void sendOther(Update update) {
-        execute(SendMessage.builder().chatId(update.getMessage().getChatId().toString()).text("Действие нераспознано. Пожалуйста, вызовите помощь командой /help").build());
+        execute(SendMessage.builder().chatId(update.getMessage().getChatId().toString()).text("Действие нераспознано. Пожалуйста, вызовите помощь командой /help\nЕсли никакие команды не работают, попробуйте написать /start").build());
     }
 
 
